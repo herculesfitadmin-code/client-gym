@@ -285,6 +285,7 @@ export const TestimonialsSection: React.FC = () => {
   return (
     <section
       id="testimonials"
+      aria-label="Google reviews and member testimonials section"
       style={{
         padding: "8rem 2rem",
         background: "#08080A",

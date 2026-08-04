@@ -1,5 +1,6 @@
-import React, { useRef } from "react";
-import { ArrowLeft, ArrowRight, Award } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Award, ChevronRight } from "lucide-react";
+import { LearnMoreModal, ModalContent } from "./LearnMoreModal";
 
 const LIME = "#D8FF3E";
 
@@ -15,81 +16,91 @@ export interface CoachItem {
   image: string;
 }
 
+export interface CoachesStackedCardsSectionProps {
+  coaches?: CoachItem[];
+}
+
 export const gymCoaches: CoachItem[] = [
   {
     id: "coach-1",
     cardNumber: "01",
     totalCards: "04",
-    title: "HEAD COACH & FOUNDER",
-    subtitle: "Strength & Conditioning Specialist",
-    meta: "10+ YEARS EXPERIENCE",
-    desc: "Pioneer of heavy compound strength training in Kalaburagi. Specialized in power building, structural physique transformation, and custom macro periodization.",
-    tags: ["Strength & Power", "Conditioning", "Form & Technique", "1-on-1 Coaching"],
-    image: "https://images.unsplash.com/photo-1567013127542-490d757e51fc?q=80&w=1200&auto=format&fit=crop",
+    title: "GIRISH",
+    subtitle: "Founder & Head Coach",
+    meta: "19+ YEARS EXP • FOUNDER",
+    desc: "Dedicated athlete first, coach second, businessman last. Building Hercules out of genuine passion to guide everyday members through biomechanics, heavy lifting, and athletic discipline.",
+    tags: ["Heavyweight Champ", "1-on-1 Mentorship", "Biomechanical Form"],
+    image: "/transformations/girish_after.png",
   },
   {
     id: "coach-2",
     cardNumber: "02",
     totalCards: "04",
-    title: "PERSONAL TRAINING SPECIALIST",
-    subtitle: "Body Recomposition & Fat Loss",
-    meta: "CERTIFIED MASTER COACH",
-    desc: "Focusing on rapid body recomposition, biomechanics, and personalized workout routines designed to maximize fat loss while preserving lean athletic muscle mass.",
-    tags: ["Body Recomp", "Biomechanics", "Fat Loss", "Personalized Plan"],
-    image: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?q=80&w=1200&auto=format&fit=crop",
+    title: "PRIYA SHARMA",
+    subtitle: "Women's Fitness & Fat Loss",
+    meta: "8+ YEARS EXP • SENIOR COACH",
+    desc: "Specialising in women's strength training, body recomposition, post-natal recovery, and functional fat loss circuits in a comfortable, supportive environment.",
+    tags: ["Women's Fitness", "Fat Loss", "Habit Coaching"],
+    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=800&auto=format&fit=crop",
   },
   {
     id: "coach-3",
     cardNumber: "03",
     totalCards: "04",
-    title: "ATHLETIC PERFORMANCE COACH",
-    subtitle: "Functional Fitness & Agility",
-    meta: "SENIOR TRAINER",
-    desc: "Specializing in athletic mobility, core stability, free weight mechanics, and progressive overload tracking to maximize athletic performance.",
-    tags: ["Athletic Performance", "Mobility", "Hypertrophy", "Recovery"],
-    image: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?q=80&w=1200&auto=format&fit=crop",
+    title: "KUMAR SWAMY",
+    subtitle: "Powerlifting & Form Coach",
+    meta: "10+ YEARS EXP • STRENGTH COACH",
+    desc: "Master of squat, bench, and deadlift biomechanics. Focuses on safe joint loading, posture alignment, and maximum strength output for athletes of all levels.",
+    tags: ["Powerlifting", "Form Correction", "Joint Safety"],
+    image: "https://images.unsplash.com/photo-1567013127542-490d757e51fc?q=80&w=800&auto=format&fit=crop",
   },
   {
     id: "coach-4",
     cardNumber: "04",
     totalCards: "04",
-    title: "NUTRITION & DISCIPLINE COACH",
-    subtitle: "Macro Guidance & Periodization",
-    meta: "CERTIFIED NUTRITIONIST",
-    desc: "Guiding members with science-backed diet strategies, meal preparation frameworks, and mental discipline needed for sustainable long-term results.",
-    tags: ["Nutrition Plan", "Macro Guidance", "Discipline", "Lifestyle"],
-    image: "https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1200&auto=format&fit=crop",
+    title: "ARJUN DESHMUKH",
+    subtitle: "Physiology & Active Recovery",
+    meta: "6+ YEARS EXP • PHYSIO COACH",
+    desc: "Combines functional movement screening with high-intensity interval conditioning to improve VO₂ max, cardiovascular longevity, and daily stamina.",
+    tags: ["Active Recovery", "VO2 Max Boost", "Stamina"],
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
   },
 ];
 
-export const CoachesStackedCardsSection: React.FC = () => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProps> = ({
+  coaches: propCoaches,
+}) => {
+  const displayCoaches = propCoaches && propCoaches.length > 0 ? propCoaches : gymCoaches;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [modalData, setModalData] = useState<ModalContent | null>(null);
 
   const handleScroll = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === "left" ? -460 : 460;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
+    if (!scrollContainerRef.current) return;
+    const scrollAmount = 380;
+    scrollContainerRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
   };
 
   return (
     <section
       id="trainers"
       style={{
-        padding: "8rem 2rem",
-        background: "#09090A",
+        padding: "7rem 2rem",
+        background: "#080808",
         position: "relative",
         overflow: "hidden",
       }}
     >
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-        {/* Header Row with Title and Horizontal Navigation Controls */}
+        {/* Header Row */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-end",
-            marginBottom: "3.5rem",
+            marginBottom: "3rem",
             flexWrap: "wrap",
             gap: "2rem",
           }}
@@ -114,21 +125,21 @@ export const CoachesStackedCardsSection: React.FC = () => {
                   textTransform: "uppercase",
                 }}
               >
-                EXPERT COACHING & TEAM
+                ATHLETE MENTORSHIP ROSTER
               </span>
             </div>
             <h2
               style={{
                 fontFamily: '"Big Shoulders Display", Impact, sans-serif',
                 fontWeight: 900,
-                fontSize: "clamp(2.5rem, 5.5vw, 4.5rem)",
+                fontSize: "clamp(2.4rem, 5vw, 4.2rem)",
                 textTransform: "uppercase",
                 lineHeight: 0.92,
                 color: "#FFFFFF",
                 letterSpacing: "0.02em",
               }}
             >
-              MEET THE <span style={{ color: LIME }}>COACHES</span>
+              LEARN FROM <span style={{ color: LIME }}>PROVEN ATHLETES</span>
             </h2>
           </div>
 
@@ -136,129 +147,123 @@ export const CoachesStackedCardsSection: React.FC = () => {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
               onClick={() => handleScroll("left")}
-              aria-label="Previous Coach"
               style={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
-                background: "rgba(18, 18, 22, 0.8)",
+                background: "rgba(255, 255, 255, 0.04)",
                 border: "1px solid rgba(255, 255, 255, 0.12)",
                 color: "#FFFFFF",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                transition: "all 0.25s ease",
+                transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
+                el.style.background = LIME;
+                el.style.color = "#080808";
                 el.style.borderColor = LIME;
-                el.style.color = LIME;
-                el.style.transform = "scale(1.05)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255, 255, 255, 0.12)";
+                el.style.background = "rgba(255, 255, 255, 0.04)";
                 el.style.color = "#FFFFFF";
-                el.style.transform = "scale(1)";
+                el.style.borderColor = "rgba(255, 255, 255, 0.12)";
               }}
+              aria-label="Scroll Left"
             >
               <ArrowLeft size={18} />
             </button>
-
             <button
               onClick={() => handleScroll("right")}
-              aria-label="Next Coach"
               style={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
-                background: "rgba(18, 18, 22, 0.8)",
+                background: "rgba(255, 255, 255, 0.04)",
                 border: "1px solid rgba(255, 255, 255, 0.12)",
                 color: "#FFFFFF",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                transition: "all 0.25s ease",
+                transition: "all 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
+                el.style.background = LIME;
+                el.style.color = "#080808";
                 el.style.borderColor = LIME;
-                el.style.color = LIME;
-                el.style.transform = "scale(1.05)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255, 255, 255, 0.12)";
+                el.style.background = "rgba(255, 255, 255, 0.04)";
                 el.style.color = "#FFFFFF";
-                el.style.transform = "scale(1)";
+                el.style.borderColor = "rgba(255, 255, 255, 0.12)";
               }}
+              aria-label="Scroll Right"
             >
               <ArrowRight size={18} />
             </button>
           </div>
         </div>
 
-        {/* Horizontal Scroll Track */}
+        {/* Horizontal Carousel Track */}
         <div
-          ref={scrollRef}
+          ref={scrollContainerRef}
           style={{
             display: "flex",
-            gap: 24,
+            gap: 20,
             overflowX: "auto",
             scrollSnapType: "x mandatory",
+            paddingBottom: "1.5rem",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
-            paddingBottom: "2rem",
-            paddingTop: "0.5rem",
           }}
-          className="hf-horizontal-coaches-track"
         >
-          {gymCoaches.map((coach) => (
+          {displayCoaches.map((coach, index) => (
             <div
-              key={coach.id}
+              key={coach.id || index}
               style={{
-                width: "clamp(320px, 80vw, 440px)",
-                minWidth: "clamp(320px, 80vw, 440px)",
-                flexShrink: 0,
+                flex: "0 0 310px",
                 scrollSnapAlign: "start",
-                background: "rgba(18, 18, 22, 0.94)",
+                background: "rgba(16, 16, 20, 0.95)",
                 backdropFilter: "blur(20px)",
                 WebkitBackdropFilter: "blur(20px)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 24,
-                padding: "2rem",
+                borderRadius: 20,
+                padding: "1.5rem",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
-                transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
-                boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
-                boxSizing: "border-box",
+                boxShadow: "0 16px 36px rgba(0,0,0,0.6)",
+                transition: "all 0.3s ease",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = `${LIME}55`;
-                el.style.transform = "translateY(-6px)";
-                el.style.boxShadow = `0 30px 60px rgba(0,0,0,0.85), 0 0 25px ${LIME}15`;
+                el.style.borderColor = "rgba(216, 255, 62, 0.35)";
+                el.style.transform = "translateY(-4px)";
+                el.style.boxShadow = "0 24px 50px rgba(0,0,0,0.8), 0 0 25px rgba(216, 255, 62, 0.1)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.borderColor = "rgba(255, 255, 255, 0.08)";
                 el.style.transform = "translateY(0)";
-                el.style.boxShadow = "0 20px 40px rgba(0,0,0,0.6)";
+                el.style.boxShadow = "0 16px 36px rgba(0,0,0,0.6)";
               }}
             >
               <div>
-                {/* Image Box */}
+                {/* Photo Box */}
                 <div
                   style={{
                     position: "relative",
                     width: "100%",
-                    height: 260,
-                    borderRadius: 16,
+                    height: 240,
+                    borderRadius: 14,
                     overflow: "hidden",
-                    marginBottom: "1.5rem",
+                    marginBottom: "1.25rem",
                     border: "1px solid rgba(255,255,255,0.08)",
                     background: "#0D0D10",
                   }}
@@ -270,140 +275,152 @@ export const CoachesStackedCardsSection: React.FC = () => {
                       width: "100%",
                       height: "100%",
                       objectFit: "cover",
-                      objectPosition: "center",
-                      display: "block",
+                      objectPosition: "top center",
                     }}
                   />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: "linear-gradient(to top, rgba(14,14,16,0.9) 0%, transparent 60%)",
-                    }}
-                  />
-
                   {/* Top Badge */}
                   <div
                     style={{
                       position: "absolute",
-                      top: 14,
-                      left: 14,
+                      top: 12,
+                      left: 12,
                       background: LIME,
                       color: "#080808",
                       fontFamily: '"JetBrains Mono", monospace',
                       fontWeight: 800,
-                      fontSize: 10,
-                      padding: "4px 12px",
+                      fontSize: 9.5,
+                      padding: "4px 10px",
                       borderRadius: 20,
                       letterSpacing: "0.1em",
-                      boxShadow: "0 2px 10px rgba(216, 255, 62, 0.3)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
                     }}
                   >
-                    CARD {coach.cardNumber} / {coach.totalCards}
+                    <Award size={11} /> {coach.meta}
                   </div>
                 </div>
 
-                {/* Subtitle / Meta */}
-                <div
-                  style={{
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 10,
-                    color: "#A1A1AA",
-                    letterSpacing: "0.15em",
-                    marginBottom: 6,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {coach.meta}
-                </div>
-
-                {/* Coach Title */}
+                {/* Coach Name */}
                 <h3
                   style={{
                     fontFamily: '"Big Shoulders Display", Impact, sans-serif',
                     fontWeight: 900,
-                    fontSize: "clamp(1.6rem, 2.5vw, 2.2rem)",
+                    fontSize: "1.6rem",
                     textTransform: "uppercase",
-                    lineHeight: 0.95,
+                    lineHeight: 1,
                     color: "#FFFFFF",
                     letterSpacing: "0.02em",
-                    marginBottom: 8,
+                    marginBottom: "0.3rem",
                   }}
                 >
                   {coach.title}
                 </h3>
 
-                {/* Subtitle Highlight */}
+                {/* Subtitle / Specialty 1-Liner */}
                 <div
                   style={{
-                    fontFamily: '"DM Sans", sans-serif',
-                    fontWeight: 700,
-                    fontSize: 13,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 11,
                     color: LIME,
-                    marginBottom: "1rem",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    marginBottom: "1.25rem",
+                    fontWeight: 700,
                   }}
                 >
                   {coach.subtitle}
                 </div>
-
-                {/* Description */}
-                <p
-                  style={{
-                    fontFamily: '"DM Sans", sans-serif',
-                    color: "#B3B3B3",
-                    fontSize: 13,
-                    lineHeight: 1.65,
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  {coach.desc}
-                </p>
               </div>
 
-              {/* Bottom Tags */}
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 6,
-                  paddingTop: "1rem",
-                  borderTop: "1px solid rgba(255,255,255,0.07)",
-                }}
-              >
-                {coach.tags.map((tag, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      fontFamily: '"DM Sans", sans-serif',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#E4E4E7",
-                      background: "rgba(255, 255, 255, 0.04)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      padding: "5px 12px",
-                      borderRadius: 30,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                    }}
-                  >
-                    <span
+              <div>
+                {/* 2-3 Focus Specialty Tags */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    marginBottom: "1.25rem",
+                    paddingTop: "0.85rem",
+                    borderTop: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  {coach.tags.slice(0, 3).map((tag, i) => (
+                    <div
+                      key={i}
                       style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: "50%",
-                        background: LIME,
-                        display: "inline-block",
+                        fontFamily: '"DM Sans", sans-serif',
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        color: "#E4E4E7",
+                        background: "rgba(255, 255, 255, 0.04)",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
                       }}
-                    />
-                    {tag}
-                  </div>
-                ))}
+                    >
+                      <span
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: LIME,
+                          display: "inline-block",
+                        }}
+                      />
+                      {tag}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Clean Apple-style Learn More Button */}
+                <div>
+                  <button
+                    onClick={() =>
+                      setModalData({
+                        badge: coach.meta,
+                        title: coach.title,
+                        subtitle: coach.subtitle,
+                        fullDescription: coach.desc,
+                        keyPoints: coach.tags,
+                      })
+                    }
+                    style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: "#080808",
+                      background: LIME,
+                      border: "none",
+                      padding: "10px 18px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      width: "100%",
+                      justifyContent: "center",
+                      letterSpacing: "0.12em",
+                      transition: "opacity 0.2s",
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
+                  >
+                    Learn More <ChevronRight size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Learn More Pop-up Modal */}
+      <LearnMoreModal isOpen={!!modalData} onClose={() => setModalData(null)} data={modalData} />
     </section>
   );
 };

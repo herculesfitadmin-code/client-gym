@@ -9,6 +9,8 @@ import {
   ArrowRight,
   MapPin,
   MessageCircle,
+  Tag as TagIcon,
+  ShieldCheck,
 } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 import Lenis from "lenis";
@@ -16,6 +18,14 @@ import { ProgramStackedCardsSection } from "./components/ProgramStackedCards";
 import { TestimonialsSection } from "./components/TestimonialsSection";
 import { CoachesStackedCardsSection } from "./components/CoachesStackedCards";
 import { GymAtmosphereSection } from "./components/GymAtmosphereSection";
+import { FounderStorySection } from "./components/FounderStorySection";
+import { AdminAuthModal } from "./components/AdminAuthModal";
+import { AdminControlPanel } from "./components/AdminControlPanel";
+import { loadSiteData, saveSiteData, recordEnquiryLead, defaultSiteData, AdminSiteData, PricingPlan, BlogPost } from "./adminStore";
+import { WebInquiryModal } from "./components/WebInquiryModal";
+import { HerculesLogo } from "./components/HerculesLogo";
+import { BlogArticleModal } from "./components/BlogArticleModal";
+import { PolicyReaderModal } from "./components/PolicyReaderModal";
 
 import girishBefore from "../../public/transformations/girish_before.png";
 import girishAfter from "../../public/transformations/girish_after.png";
@@ -92,7 +102,7 @@ const programs = [
     duration: "90 MIN",
     difficulty: "GRUELING",
     tag: "GRIND",
-    color: BLUE,
+    color: LIME,
     desc: "Long-form cardio and lactate threshold training for peak athletic performance, mental fortitude, and stamina.",
   },
   {
@@ -185,32 +195,44 @@ const plans = [
 
 const faqs = [
   {
-    q: "What are your operating hours?",
-    a: "Champion members enjoy 24/7 unrestricted access. Athlete members have access from 6AM to 10PM, and Elite members from 5AM to 11PM — seven days a week, 365 days a year including all public holidays.",
+    q: "Which is the best gym in Kalaburagi?",
+    a: "Hercules Fitness is one of the best-rated gyms in Kalaburagi. Located on New Jewargi Road above the Ola showroom in State Bank Colony, we offer modern equipment, experienced certified trainers, spacious workout areas, and affordable membership plans starting at just ₹2,000 per month. Whether you are a complete beginner or an experienced lifter, Coach Girish and his team provide personal attention to every member.",
   },
   {
-    q: "Do you offer trial sessions?",
-    a: "Yes. We offer a complimentary one-day trial pass for prospective members. Walk in with a valid government-issued ID, or book your slot via WhatsApp to ensure floor space is ready for you.",
+    q: "Do you have personal trainers at Hercules Fitness?",
+    a: "Yes. Hercules Fitness has experienced certified trainers led by Coach Girish, who has 19+ years of hands-on coaching experience. Our trainers guide you through proper exercise form, posture correction, and customized workout plans based on your fitness goals — whether it is weight loss, muscle gain, or general fitness.",
   },
   {
-    q: "What equipment brands do you carry?",
-    a: "We exclusively use Eleiko barbells and competition plates in our strength zone, and Panatta resistance machines on our training floor — the same equipment used in professional and international competitions worldwide.",
+    q: "Is Hercules Fitness beginner friendly?",
+    a: "Absolutely. Hercules Fitness is very beginner friendly. You do not need any prior gym experience to join. Our trainers teach you how to use every machine safely, correct your exercise form from day one, and create simple workout plans that match your current fitness level. Many of our members started as complete beginners.",
   },
   {
-    q: "Are personal training sessions included in my membership?",
-    a: "Elite memberships include 4 PT sessions per month. Champion memberships include unlimited personal training. Athlete members can purchase add-on PT sessions at ₹800 per session at any time.",
+    q: "What are the gym membership plans and prices?",
+    a: "Our membership plans are very affordable: 1 Month at ₹2,000, 3 Months at ₹4,000, 6 Months at ₹6,000, and 12 Months at ₹10,000. Members who enquire through our website get a flat 25% discount on all plans. All memberships include full gym floor access, trainer guidance, and locker room access.",
   },
   {
-    q: "Do you provide nutrition guidance?",
-    a: "All Elite and Champion members receive dedicated nutrition consultations. Our coaches are certified in sports nutrition and provide personalized macronutrient protocols aligned to your transformation goals and training schedule.",
+    q: "What are the gym timings at Hercules Fitness Kalaburagi?",
+    a: "Hercules Fitness is open Monday to Saturday from 5:00 AM to 10:00 PM, and on Sundays from 6:00 AM to 10:00 AM. You can choose any morning or evening slot based on your convenience.",
   },
   {
-    q: "How large is the facility?",
-    a: "Hercules FITNESS spans 12,000 square feet across 6 dedicated training systems: Olympic lifting platform, powerlifting rack room, HIIT floor, combat zone, cardio deck, and active recovery suite.",
+    q: "Do you help with weight loss?",
+    a: "Yes, we offer dedicated weight loss guidance. Our trainers create customized workout plans combined with simple, practical diet advice using everyday food — no expensive supplements required. Many members have achieved significant fat loss results with our step-by-step approach.",
   },
   {
-    q: "Can I pause or freeze my membership?",
-    a: "Yes. All memberships can be frozen for up to 30 consecutive days per year at no additional charge. Champion memberships allow up to 60 days of annual freeze, which can be split across multiple intervals as needed.",
+    q: "Is strength training available at Hercules Fitness?",
+    a: "Yes. Strength training is one of our core specialties. We have a fully equipped strength zone with squat racks, benches, dumbbells, barbells, cable machines, and plate-loaded equipment. Coach Girish personally guides members on proper compound lifting techniques including squats, deadlifts, and bench presses.",
+  },
+  {
+    q: "Is parking available at Hercules Fitness?",
+    a: "Yes, convenient parking is available near the gym. Hercules Fitness is located on the 2nd floor above the Ola showroom on New Jewargi Road, State Bank Colony, Kalaburagi — an easily accessible location with good connectivity.",
+  },
+  {
+    q: "What equipment does Hercules Fitness have?",
+    a: "Hercules Fitness has a wide range of modern gym equipment including cardio machines (treadmills, ellipticals, stationary bikes), a fully equipped strength zone with squat racks, bench presses, cable crossover machines, dumbbell racks, kettlebells, resistance machines, and a functional training area.",
+  },
+  {
+    q: "How can I contact Hercules Fitness Kalaburagi?",
+    a: "You can reach Hercules Fitness by calling or WhatsApp at +91 99008 97907. Visit us at: 2nd floor, Sy #71/1A, Plot # 18, New Jewargi Rd, above Ola showroom, State Bank Colony, Kalaburagi, Karnataka 585102. You can also enquire through our website to get a flat 25% discount on membership.",
   },
 ];
 
@@ -340,12 +362,84 @@ function MetricCard({
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function App() {
+  const [siteData, setSiteData] = useState<AdminSiteData>(() => loadSiteData());
+  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [activeAdminEmail, setActiveAdminEmail] = useState("abcd@gmail.com");
+  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+
+  const handleSaveSiteData = (newData: AdminSiteData) => {
+    setSiteData(newData);
+    saveSiteData(newData);
+  };
+
+  const handleResetSiteData = () => {
+    setSiteData(defaultSiteData);
+    saveSiteData(defaultSiteData);
+  };
+
   const [navOpen, setNavOpen] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const [offerDismissed, setOfferDismissed] = useState(false);
+  const [activePolicyModal, setActivePolicyModal] = useState<"privacy" | "terms" | "refunds" | null>(null);
+
+  // Consultation Form States
+  const [consultName, setConsultName] = useState("");
+  const [consultPhone, setConsultPhone] = useState("");
+  const [consultEmail, setConsultEmail] = useState("");
+  const [consultGoal, setConsultGoal] = useState("Goal: Fat Loss");
+  const [consultCoach, setConsultCoach] = useState("No Specific Coach (General Guidance)");
+  const [consultSubmitted, setConsultSubmitted] = useState(false);
+
+  const handleConsultationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!consultName.trim() || !consultPhone.trim()) return;
+
+    recordEnquiryLead(
+      {
+        name: consultName,
+        phone: consultPhone,
+        email: consultEmail,
+        goal: consultGoal,
+        preferredCoach: consultCoach,
+        planName: "Free Consultation",
+      },
+      siteData,
+      setSiteData
+    );
+
+    setConsultSubmitted(true);
+
+    const waText = encodeURIComponent(
+      `Hello Hercules Fitness Kalaburagi!\n\n` +
+      `I would like to book a Free Consultation:\n` +
+      `👤 *Name*: ${consultName}\n` +
+      `📞 *Phone*: ${consultPhone}\n` +
+      (consultEmail ? `📧 *Email*: ${consultEmail}\n` : "") +
+      `🎯 *Goal*: ${consultGoal}\n` +
+      `🏋️ *Preferred PT Coach*: ${consultCoach}`
+    );
+    window.open(`https://wa.me/919900897907?text=${waText}`, "_blank");
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 250) {
+        setHasScrolled(true);
+      } else {
+        setHasScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const [activeProg, setActiveProg] = useState(0);
   const [sliderPos, setSliderPos] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const [facilityIdx, setFacilityIdx] = useState(0);
   const [hoveredTrainer, setHoveredTrainer] = useState<number | null>(null);
+  const [inquiryPlan, setInquiryPlan] = useState<PricingPlan | null>(null);
   const [bmi, setBmi] = useState({ weight: "", height: "", result: null as number | null });
   const [cal, setCal] = useState({
     weight: "",
@@ -354,13 +448,45 @@ export default function App() {
     result: null as number | null,
   });
   const sliderRef = useRef<HTMLDivElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (video) {
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+
+      const startVideo = () => {
+        if (video && video.paused) {
+          video.play().catch(() => {});
+        }
+      };
+
+      startVideo();
+
+      document.addEventListener("click", startVideo, { once: true });
+      document.addEventListener("touchstart", startVideo, { once: true });
+      window.addEventListener("focus", startVideo);
+
+      return () => {
+        document.removeEventListener("click", startVideo);
+        document.removeEventListener("touchstart", startVideo);
+        window.removeEventListener("focus", startVideo);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 1.5,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      gestureOrientation: "vertical",
       smoothWheel: true,
-      touchMultiplier: 1.5,
+      wheelMultiplier: 1.1,
+      touchMultiplier: 2.0,
+      infinite: false,
     });
 
     function raf(time: number) {
@@ -424,13 +550,108 @@ export default function App() {
   };
 
   const bmiCategory = (v: number) =>
-    v < 18.5 ? { label: "UNDERWEIGHT", color: BLUE } :
+    v < 18.5 ? { label: "UNDERWEIGHT", color: CYAN } :
     v < 25   ? { label: "HEALTHY", color: LIME } :
     v < 30   ? { label: "OVERWEIGHT", color: RED } :
                { label: "OBESE", color: PURPLE };
 
   return (
-    <div style={{ background: "#080808", color: "#fff", ...BF, overflowX: "clip" }}>
+    <div style={{ background: "#080808", color: "#fff", ...BF, overflowX: "clip" }} role="document">
+      {/* ─── SCROLL-TRIGGERED NEON ANNOUNCEMENT POPUP ─── */}
+      {siteData.offer.enabled && hasScrolled && !offerDismissed && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 9995,
+            background: "rgba(10, 10, 14, 0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "2px solid #D8FF3E",
+            borderRadius: 12,
+            padding: "16px 20px",
+            maxWidth: 380,
+            boxShadow: "0 12px 35px rgba(216, 255, 62, 0.3), 0 0 40px rgba(0, 0, 0, 0.9)",
+            animation: "offerPopupSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  ...MF,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  background: LIME,
+                  color: "#080808",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                🔥 {siteData.offer.badgeText || "SPECIAL OFFER"}
+              </span>
+              {siteData.offer.discountPercentage > 0 && (
+                <span style={{ ...MF, fontSize: 10, color: LIME, fontWeight: 700 }}>
+                  {siteData.offer.discountPercentage}% OFF
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => setOfferDismissed(true)}
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "none",
+                borderRadius: "50%",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#A3A3A3",
+                cursor: "pointer",
+                transition: "background 0.2s",
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#FFFFFF", lineHeight: 1.5, margin: 0 }}>
+            {siteData.offer.announcementText}
+          </p>
+
+          <a
+            href="#membership"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              background: LIME,
+              color: "#080808",
+              padding: "9px 14px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 800,
+              fontFamily: '"JetBrains Mono", monospace',
+              letterSpacing: "0.1em",
+              textDecoration: "none",
+              marginTop: 4,
+              boxShadow: "0 4px 15px rgba(216, 255, 62, 0.3)",
+              transition: "transform 0.15s ease",
+            }}
+          >
+            CLAIM OFFER NOW <ArrowRight size={13} />
+          </a>
+        </div>
+      )}
+
       {/* NOISE */}
       <div
         style={{
@@ -444,7 +665,7 @@ export default function App() {
       />
 
       {/* ═══════════════════════════════════════ NAV */}
-      <nav
+      <nav aria-label="Main navigation"
         style={{
           position: "fixed",
           top: 0,
@@ -469,27 +690,14 @@ export default function App() {
           }}
         >
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                background: LIME,
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ ...DF, color: "#080808", fontSize: 19, lineHeight: 1 }}>H</span>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <HerculesLogo size={44} />
             <div>
-              <div style={{ ...DF, fontSize: 18, letterSpacing: "0.12em", lineHeight: 1 }}>
+              <div style={{ ...DF, fontSize: 19, letterSpacing: "0.12em", lineHeight: 1 }}>
                 HERCULES
               </div>
               <div style={{ ...MF, fontSize: 8, color: "#B3B3B3", letterSpacing: "0.35em" }}>
-                FITNESS
+                FITNESS CENTRE
               </div>
             </div>
           </div>
@@ -497,10 +705,13 @@ export default function App() {
           {/* Desktop links */}
           <div className="hf-desktop-nav" style={{ display: "flex", gap: 36, alignItems: "center" }}>
             {[
+              { label: "FOUNDER STORY", href: "#founder-story" },
+              { label: "PHILOSOPHY", href: "#philosophy" },
               { label: "PROGRAMS", href: "#programs" },
-              { label: "THE ARENA", href: "#arena" },
-              { label: "TRAINERS", href: "#trainers" },
-              { label: "MEMBERSHIP", href: "#membership" },
+              { label: "ROSTER", href: "#trainers" },
+              { label: "MENTORSHIP", href: "#membership" },
+              { label: "FAQ", href: "#faq" },
+              { label: "ARTICLES", href: "#blog" },
             ].map((item) => (
               <a
                 key={item.label}
@@ -522,7 +733,7 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <a href="tel:+918000000000" style={{ color: "#B3B3B3", lineHeight: 0 }}>
+            <a href="tel:+919900897907" aria-label="Call Hercules Fitness" style={{ color: "#B3B3B3", lineHeight: 0 }}>
               <Phone size={16} />
             </a>
             <a
@@ -543,7 +754,7 @@ export default function App() {
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
-              JOIN NOW
+              EARN MENTORSHIP
             </a>
             <button
               className="hf-mobile-btn"
@@ -572,10 +783,13 @@ export default function App() {
             }}
           >
             {[
+              { label: "FOUNDER STORY", href: "#founder-story" },
+              { label: "PHILOSOPHY", href: "#philosophy" },
               { label: "PROGRAMS", href: "#programs" },
-              { label: "THE ARENA", href: "#arena" },
-              { label: "TRAINERS", href: "#trainers" },
-              { label: "MEMBERSHIP", href: "#membership" },
+              { label: "ROSTER", href: "#trainers" },
+              { label: "MENTORSHIP", href: "#membership" },
+              { label: "FAQ", href: "#faq" },
+              { label: "ARTICLES", href: "#blog" },
             ].map((item) => (
               <a
                 key={item.label}
@@ -599,16 +813,23 @@ export default function App() {
         )}
       </nav>
 
+      <main>
       {/* ═══════════════════════════════════════ HERO */}
       <section
+        aria-label="Hero section — Hercules Fitness Kalaburagi"
         style={{ position: "relative", height: "100vh", minHeight: 680, overflow: "hidden" }}
       >
         <video
-          src="/hergirish_rotated.mp4"
+          ref={heroVideoRef}
+          key={siteData.tagline.heroVideoUrl || "/hergirish_rotated.mp4"}
+          src={siteData.tagline.heroVideoUrl || "/hergirish_rotated.mp4"}
           autoPlay
           loop
           muted
           playsInline
+          controls={false}
+          aria-hidden="true"
+          title="Coach Girish training at Hercules Fitness Kalaburagi"
           style={{
             position: "absolute",
             inset: 0,
@@ -616,6 +837,7 @@ export default function App() {
             height: "100%",
             objectFit: "cover",
             objectPosition: "center",
+            pointerEvents: "none",
           }}
         />
         {/* Cinematic gradient */}
@@ -659,7 +881,7 @@ export default function App() {
             padding: "0 2rem 5rem",
           }}
         >
-          <SectionLabel>BIDAR, KARNATAKA — EST. 2019</SectionLabel>
+          <SectionLabel>KALABURAGI, KARNATAKA — EST. 2019</SectionLabel>
 
           <h1
             style={{
@@ -671,9 +893,9 @@ export default function App() {
               marginBottom: "1.5rem",
             }}
           >
-            WHERE CHAMPIONS
+            {siteData.tagline.headlineMain}
             <br />
-            <span style={{ color: LIME }}>ARE FORGED</span>
+            <span style={{ color: LIME }}>{siteData.tagline.headlineHighlight}</span>
           </h1>
 
           <p
@@ -685,15 +907,15 @@ export default function App() {
               marginBottom: "2.5rem",
             }}
           >
-            12,000 sq ft of elite-grade training infrastructure. Six disciplines. Fifteen
-            coaches. One mission — build the version of you that doesn&apos;t quit.
+            {siteData.tagline.subtitle}
           </p>
 
           <div
             style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: "4rem" }}
           >
             <a
-              href="#programs"
+              href="#founder-story"
+              title="Our Story: Building a Trusted Gym in Kalaburagi"
               style={{
                 ...MF,
                 fontSize: 10,
@@ -712,10 +934,10 @@ export default function App() {
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
-              EXPLORE PROGRAMS <ArrowRight size={13} />
+              OUR STORY: BUILDING A TRUSTED GYM IN KALABURAGI <ArrowRight size={13} />
             </a>
             <a
-              href="#facility"
+              href="#philosophy"
               style={{
                 ...MF,
                 fontSize: 10,
@@ -743,19 +965,14 @@ export default function App() {
                 el.style.background = "rgba(255,255,255,0.04)";
               }}
             >
-              TOUR FACILITY <ArrowRight size={13} />
+              OUR PHILOSOPHY <ArrowRight size={13} />
             </a>
           </div>
 
           {/* Metrics */}
           <div style={{ display: "flex", gap: "clamp(24px,5vw,60px)", flexWrap: "wrap" }}>
-            {[
-              ["500+", "MEMBERS"],
-              ["15+", "COACHES"],
-              ["12,000", "SQ FT"],
-              ["6", "SYSTEMS"],
-            ].map(([v, l]) => (
-              <MetricCard key={l} val={v} label={l} />
+            {(siteData.tagline.heroMetrics || defaultSiteData.tagline.heroMetrics!).map(({ value, label }) => (
+              <MetricCard key={label} val={value} label={label} />
             ))}
           </div>
         </div>
@@ -775,12 +992,17 @@ export default function App() {
             transformOrigin: "center",
           }}
         >
-          HERCULES FITNESS — BIDAR 2019
+          HERCULES FITNESS — KALABURAGI 2019
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════ PHILOSOPHY */}
+      {/* ═══════════════════════════════════════ FOUNDER STORY & PHILOSOPHY QUOTE */}
+      <FounderStorySection founderData={siteData.founder} />
+
+      {/* ═══════════════════════════════════════ ATHLETIC PHILOSOPHY */}
       <section
+        id="philosophy"
+        aria-label="Our training philosophy"
         style={{ padding: "8rem 2rem", background: "#080808", position: "relative", overflow: "hidden" }}
       >
         <div
@@ -795,7 +1017,7 @@ export default function App() {
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="hf-philo-grid">
             <div>
-              <SectionLabel>PHILOSOPHY</SectionLabel>
+              <SectionLabel>OUR APPROACH</SectionLabel>
               <h2
                 style={{
                   ...DF,
@@ -804,13 +1026,9 @@ export default function App() {
                   textTransform: "uppercase",
                 }}
               >
-                WE DON&apos;T
+                FITNESS THAT WORKS
                 <br />
-                COUNT REPS.
-                <br />
-                <span style={{ color: LIME }}>WE BUILD</span>
-                <br />
-                LEGACIES.
+                <span style={{ color: LIME }}>IN REAL LIFE</span>
               </h2>
               <p
                 style={{
@@ -818,11 +1036,10 @@ export default function App() {
                   lineHeight: 1.8,
                   marginTop: "2rem",
                   fontSize: 15,
-                  maxWidth: 400,
+                  maxWidth: 420,
                 }}
               >
-                Every session at Hercules is engineered with singular intent. No filler.
-                No shortcuts. Just systematic progression toward the best version of you.
+                You don&apos;t need expensive gear or complicated workouts. You just need clear guidance, consistent effort, and a coach who genuinely cares about your progress.
               </p>
             </div>
 
@@ -830,18 +1047,18 @@ export default function App() {
               {[
                 {
                   num: "01",
-                  label: "DISCIPLINE",
-                  desc: "Consistency is the compound interest of fitness. We build habits that outlast motivation and carry through adversity.",
+                  label: "STEP-BY-STEP GUIDANCE",
+                  desc: "No matter your current fitness level, we teach you how to move correctly and safely from your very first session.",
                 },
                 {
                   num: "02",
-                  label: "PRECISION",
-                  desc: "Every lift, rep, macro, and recovery window is tracked and optimized. Guesswork is the enemy of progress.",
+                  label: "HONEST RESULTS",
+                  desc: "Simple exercise plans, clear diet advice, and real progress. We don't sell fake shortcuts or social media trends.",
                 },
                 {
                   num: "03",
-                  label: "PROGRESS",
-                  desc: "Data-driven periodisation and measurable outcomes. Your metrics tell the story of your evolution — we make that story compelling.",
+                  label: "STRONG DISCIPLINE",
+                  desc: "We help you build simple daily habits that stick with you for life—giving you more energy and confidence every single day.",
                 },
               ].map(({ num, label, desc }) => (
                 <div
@@ -904,14 +1121,14 @@ export default function App() {
       <GymAtmosphereSection />
 
       {/* ═══════════════════════════════════════ COACHES (3D STACKED CARDS) */}
-      <CoachesStackedCardsSection />
+      <CoachesStackedCardsSection coaches={siteData.coaches} />
 
       {/* ═══════════════════════════════════════ TRANSFORMATIONS */}
-      <section style={{ padding: "8rem 2rem", background: "#080808" }}>
+      <section aria-label="Fitness transformation results" style={{ padding: "8rem 2rem", background: "#080808" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="hf-transform-grid">
             <div>
-              <SectionLabel>TRANSFORMATIONS</SectionLabel>
+              <SectionLabel>FOUNDER & MEMBER RESULTS</SectionLabel>
               <h2
                 style={{
                   ...DF,
@@ -923,7 +1140,7 @@ export default function App() {
               >
                 THE PROOF IS
                 <br />
-                <span style={{ color: LIME }}>IN THE BODY.</span>
+                <span style={{ color: LIME }}>IN THE CHARACTER</span>
               </h2>
 
               <div
@@ -935,13 +1152,13 @@ export default function App() {
                 }}
               >
                 {[
-                  { val: "−22kg", label: "FAT LOST", color: RED },
-                  { val: "+14kg", label: "MUSCLE GAINED", color: LIME },
-                  { val: "24%", label: "FAT REDUCTION", color: CYAN },
-                  { val: "3 WKS", label: "FIRST RESULTS", color: PURPLE },
+                  { val: "19+ YRS", label: "ATHLETIC EXP", color: LIME },
+                  { val: "100%", label: "FORM MASTERY", color: CYAN },
+                  { val: "0", label: "GIMMICKS", color: RED },
+                  { val: "LIFELONG", label: "VITALITY", color: PURPLE },
                 ].map(({ val, label, color }) => (
                   <div key={label} style={{ ...glass, padding: "1.25rem 1.5rem" }}>
-                    <div style={{ ...DF, fontSize: 28, color, lineHeight: 1 }}>{val}</div>
+                    <div style={{ ...DF, fontSize: 24, color, lineHeight: 1 }}>{val}</div>
                     <div style={{ ...MF, fontSize: 8, color: "#B3B3B3", letterSpacing: "0.18em", marginTop: 6 }}>
                       {label}
                     </div>
@@ -959,8 +1176,7 @@ export default function App() {
                   fontStyle: "italic",
                 }}
               >
-                &ldquo;In 16 weeks, Hercules took me from someone who avoided mirrors to someone
-                who competes. The system works — if you show up.&rdquo;
+                &ldquo;Girish doesn&apos;t just give you a workout plan—he teaches you how to think like an athlete, move with purpose, and respect your body. The transformation is mental as much as physical.&rdquo;
                 <footer
                   style={{
                     ...MF,
@@ -971,7 +1187,7 @@ export default function App() {
                     letterSpacing: "0.22em",
                   }}
                 >
-                  — RAHUL DESAI, BIDAR
+                  — RAHUL DESAI | TRAINED UNDER GIRISH
                 </footer>
               </blockquote>
             </div>
@@ -982,21 +1198,21 @@ export default function App() {
                 ref={sliderRef}
                 style={{
                   position: "relative",
-                  height: 500,
-                  borderRadius: 4,
+                  height: 520,
+                  borderRadius: 8,
                   overflow: "hidden",
                   cursor: "ew-resize",
                   background: "#111",
                   userSelect: "none",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.1)",
                 }}
                 onMouseDown={() => setIsDragging(true)}
                 onTouchStart={() => setIsDragging(true)}
               >
-                {/* After Image (Shredded Fit Body) */}
+                {/* After Image (Shredded Fit Body - Background) */}
                 <img
-                  src={girishAfter}
-                  alt="After transformation - Girish Shapurkar"
+                  src={siteData.founder?.afterImage || girishAfter}
+                  alt="Coach Girish after body transformation at Hercules Fitness Kalaburagi — lean and fit physique"
                   style={{
                     position: "absolute",
                     inset: 0,
@@ -1006,35 +1222,22 @@ export default function App() {
                     objectPosition: "top center",
                   }}
                 />
-                {/* Before Image (Bulky physique) */}
-                <div
+
+                {/* Before Image (Bulky physique - Foreground overlay clipped dynamically) */}
+                <img
+                  src={siteData.founder?.beforeImage || girishBefore}
+                  alt="Coach Girish before body transformation — showing starting physique"
                   style={{
                     position: "absolute",
                     inset: 0,
-                    width: `${sliderPos}%`,
-                    overflow: "hidden",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "top center",
+                    clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`,
+                    WebkitClipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`,
                   }}
-                >
-                  <img
-                    src={girishBefore}
-                    alt="Before transformation - Girish Shapurkar"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: `${10000 / sliderPos}%`,
-                      height: "100%",
-                      objectFit: "cover",
-                      objectPosition: "top center",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: "rgba(8,8,8,0.25)",
-                    }}
-                  />
-                </div>
+                />
 
                 {/* Labels */}
                 <div
@@ -1122,10 +1325,10 @@ export default function App() {
       </section>
 
       {/* ═══════════════════════════════════════ PRICING */}
-      <section id="membership" style={{ padding: "8rem 2rem", background: "#09090A" }}>
+      <section id="membership" aria-label="Membership plans and pricing" style={{ padding: "8rem 2rem", background: "#09090A" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "5rem" }}>
-            <SectionLabel>MEMBERSHIP</SectionLabel>
+            <SectionLabel>FOUNDER MENTORSHIP</SectionLabel>
             <h2
               style={{
                 ...DF,
@@ -1134,28 +1337,31 @@ export default function App() {
                 lineHeight: 0.92,
               }}
             >
-              CHOOSE YOUR
+              EARN YOUR
               <br />
-              <span style={{ color: LIME }}>LEVEL.</span>
+              <span style={{ color: LIME }}>MENTORSHIP</span>
             </h2>
           </div>
 
-          <div className="hf-pricing-grid" style={{ marginBottom: "4rem" }}>
-            {plans.map((plan) => (
+          <div className="hf-pricing-grid" style={{ marginBottom: "3rem" }}>
+            {siteData.plans.map((plan) => (
               <div
-                key={plan.name}
+                key={plan.id || plan.name}
                 style={{
                   ...glass,
-                  padding: "2.5rem",
+                  padding: "2.25rem 1.75rem",
                   position: "relative",
-                  borderColor: plan.popular ? `${LIME}40` : "rgba(255,255,255,0.08)",
+                  borderColor: plan.popular ? `${LIME}50` : "rgba(255,255,255,0.08)",
                   background: plan.popular ? "rgba(216,255,62,0.04)" : "rgba(13,13,13,0.7)",
                   transition: "border-color 0.3s, transform 0.2s",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
                 }}
                 onMouseEnter={(e) => {
                   if (!plan.popular)
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.16)";
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.2)";
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
                 }}
                 onMouseLeave={(e) => {
                   if (!plan.popular)
@@ -1163,116 +1369,156 @@ export default function App() {
                   (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
                 }}
               >
-                {plan.badge && (
+                <div>
+                  {plan.badge && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: -12,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        ...MF,
+                        fontSize: 8.5,
+                        background: LIME,
+                        color: "#080808",
+                        padding: "4px 14px",
+                        borderRadius: 20,
+                        letterSpacing: "0.15em",
+                        fontWeight: 800,
+                        whiteSpace: "nowrap",
+                        boxShadow: "0 4px 15px rgba(216,255,62,0.3)",
+                      }}
+                    >
+                      {plan.badge}
+                    </div>
+                  )}
+
                   <div
                     style={{
-                      position: "absolute",
-                      top: -12,
-                      left: "50%",
-                      transform: "translateX(-50%)",
                       ...MF,
-                      fontSize: 9,
-                      background: LIME,
-                      color: "#080808",
-                      padding: "4px 16px",
-                      borderRadius: 2,
-                      letterSpacing: "0.2em",
+                      fontSize: 10,
+                      color: plan.popular ? LIME : "#B3B3B3",
+                      letterSpacing: "0.22em",
+                      marginBottom: "1.25rem",
                       fontWeight: 700,
-                      whiteSpace: "nowrap",
                     }}
                   >
-                    {plan.badge}
+                    {plan.name}
                   </div>
-                )}
-                <div
-                  style={{
-                    ...MF,
-                    fontSize: 10,
-                    color: plan.popular ? LIME : "#B3B3B3",
-                    letterSpacing: "0.28em",
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  {plan.name}
+
+                  {/* Pricing Box: Standard Price */}
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <div
+                      style={{
+                        ...DF,
+                        fontSize: "clamp(2.4rem, 3vw, 3.2rem)",
+                        lineHeight: 1,
+                        color: plan.popular ? LIME : "#FFFFFF",
+                      }}
+                    >
+                      ₹{plan.price.toLocaleString()}/-
+                    </div>
+                    <div
+                      style={{
+                        ...MF,
+                        fontSize: 9,
+                        color: plan.popular ? LIME : "#A1A1AA",
+                        letterSpacing: "0.15em",
+                        marginTop: 4,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {plan.period || "STANDARD PLAN"}
+                    </div>
+
+                    {/* Website 25% Off Tag */}
+                    <div
+                      style={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: 8.5,
+                        fontWeight: 800,
+                        color: "#FF3E3E",
+                        background: "rgba(255, 62, 62, 0.12)",
+                        border: "1px solid rgba(255, 62, 62, 0.25)",
+                        padding: "4px 8px",
+                        borderRadius: 4,
+                        marginTop: 8,
+                        display: "inline-block",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {plan.offerTag || "⚡ GET 25% OFF VIA WEBSITE INQUIRY"}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 1,
+                      background: "rgba(255,255,255,0.06)",
+                      marginBottom: "1.5rem",
+                    }}
+                  />
+
+                  {/* Features List */}
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                      marginBottom: "2rem",
+                    }}
+                  >
+                    {plan.features.map((f, idx) => (
+                      <li key={idx} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <div
+                          style={{
+                            width: 5,
+                            height: 5,
+                            background: plan.popular ? LIME : "#666",
+                            borderRadius: "50%",
+                            marginTop: 6,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{ color: "#CCCCCC", fontSize: 12.5, lineHeight: 1.5 }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div
+
+                <button
+                  onClick={() => setInquiryPlan(plan)}
                   style={{
-                    ...DF,
-                    fontSize: "clamp(2.5rem, 3.5vw, 3.5rem)",
-                    lineHeight: 1,
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  ₹{plan.price.toLocaleString()}
-                </div>
-                <div
-                  style={{ ...MF, fontSize: 9, color: "#B3B3B3", letterSpacing: "0.2em", marginBottom: "2rem" }}
-                >
-                  PER MONTH
-                </div>
-                <div
-                  style={{ width: "100%", height: 1, background: "rgba(255,255,255,0.06)", marginBottom: "2rem" }}
-                />
-                <ul
-                  style={{
-                    listStyle: "none",
-                    padding: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 11,
-                    marginBottom: "2.5rem",
-                  }}
-                >
-                  {plan.features.map((f) => (
-                    <li key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <div
-                        style={{
-                          width: 5,
-                          height: 5,
-                          background: plan.popular ? LIME : "#444",
-                          borderRadius: "50%",
-                          marginTop: 6,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ color: "#B3B3B3", fontSize: 13, lineHeight: 1.55 }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  href="#footer"
-                  style={{
-                    display: "block",
+                    width: "100%",
                     textAlign: "center",
                     ...MF,
-                    fontSize: 10,
-                    padding: "13px",
-                    borderRadius: 2,
-                    fontWeight: 700,
-                    letterSpacing: "0.18em",
-                    textDecoration: "none",
+                    fontSize: 9.5,
+                    padding: "13px 8px",
+                    borderRadius: 4,
+                    fontWeight: 900,
+                    letterSpacing: "0.12em",
+                    border: "none",
+                    cursor: "pointer",
                     background: plan.popular ? LIME : "transparent",
-                    color: plan.popular ? "#080808" : "#fff",
-                    border: plan.popular ? "none" : "1px solid rgba(255,255,255,0.15)",
+                    color: plan.popular ? "#080808" : LIME,
+                    boxShadow: plan.popular ? "0 4px 15px rgba(216,255,62,0.3)" : "none",
+                    outline: plan.popular ? "none" : "1px solid rgba(216,255,62,0.4)",
                     transition: "all 0.25s",
                   }}
                   onMouseEnter={(e) => {
                     const el = e.currentTarget as HTMLElement;
-                    if (!plan.popular) {
-                      el.style.borderColor = LIME;
-                      el.style.color = LIME;
-                    } else el.style.opacity = "0.85";
+                    el.style.opacity = "0.85";
                   }}
                   onMouseLeave={(e) => {
                     const el = e.currentTarget as HTMLElement;
-                    if (!plan.popular) {
-                      el.style.borderColor = "rgba(255,255,255,0.15)";
-                      el.style.color = "#fff";
-                    } else el.style.opacity = "1";
+                    el.style.opacity = "1";
                   }}
                 >
-                  GET STARTED
-                </a>
+                  GET THIS FOR ₹{(plan.offerPrice !== undefined ? plan.offerPrice : Math.round(plan.price * 0.75)).toLocaleString()}
+                </button>
               </div>
             ))}
           </div>
@@ -1488,7 +1734,7 @@ export default function App() {
       <TestimonialsSection />
 
       {/* ═══════════════════════════════════════ FAQ */}
-      <section style={{ padding: "8rem 2rem", background: "#09090A" }}>
+      <section id="faq" aria-label="Frequently asked questions about Hercules Fitness Kalaburagi" style={{ padding: "8rem 2rem", background: "#09090A" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "4rem" }}>
             <SectionLabel>FAQ</SectionLabel>
@@ -1502,7 +1748,7 @@ export default function App() {
             >
               QUESTIONS
               <br />
-              <span style={{ color: LIME }}>ANSWERED.</span>
+              <span style={{ color: LIME }}>ANSWERED</span>
             </h2>
           </div>
 
@@ -1560,51 +1806,131 @@ export default function App() {
         }}
       >
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+          {/* ⚡ PERMANENT FOOTER NEON OFFER BANNER CARD */}
+          {siteData.offer.enabled && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, rgba(216,255,62,0.12) 0%, rgba(13,13,16,0.95) 100%)",
+                border: "2px solid #D8FF3E",
+                borderRadius: 12,
+                padding: "2rem 2.5rem",
+                marginBottom: "4rem",
+                boxShadow: "0 0 50px rgba(216, 255, 62, 0.15), 0 10px 40px rgba(0, 0, 0, 0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 20,
+              }}
+            >
+              <div style={{ maxWidth: 720 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span
+                    style={{
+                      ...MF,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      background: LIME,
+                      color: "#080808",
+                      padding: "4px 10px",
+                      borderRadius: 4,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    🔥 {siteData.offer.badgeText || "EXCLUSIVE OFFER"}
+                  </span>
+                  {siteData.offer.discountPercentage > 0 && (
+                    <span
+                      style={{
+                        ...MF,
+                        fontSize: 11,
+                        color: LIME,
+                        fontWeight: 700,
+                        border: "1px solid rgba(216,255,62,0.4)",
+                        padding: "3px 8px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {siteData.offer.discountPercentage}% OFF MEMBERSHIPS
+                    </span>
+                  )}
+                </div>
+                <h3
+                  style={{
+                    ...DF,
+                    fontSize: "1.75rem",
+                    color: "#FFFFFF",
+                    letterSpacing: "0.04em",
+                    margin: "0 0 6px",
+                  }}
+                >
+                  {siteData.offer.announcementText}
+                </h3>
+                <p style={{ color: "#B3B3B3", fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                  Limited time promotional membership rate available at Hercules Fitness, Kalaburagi.
+                </p>
+              </div>
+
+              <a
+                href="#membership"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  background: LIME,
+                  color: "#080808",
+                  padding: "14px 28px",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  fontFamily: '"JetBrains Mono", monospace',
+                  letterSpacing: "0.12em",
+                  textDecoration: "none",
+                  boxShadow: "0 6px 20px rgba(216,255,62,0.35)",
+                  transition: "transform 0.2s ease",
+                  flexShrink: 0,
+                }}
+              >
+                CLAIM DISCOUNT OFFER <ArrowRight size={16} />
+              </a>
+            </div>
+          )}
+
           <div className="hf-footer-grid" style={{ marginBottom: "4rem" }}>
             {/* Brand */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: "2rem" }}>
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    background: LIME,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <span style={{ ...DF, color: "#080808", fontSize: 21, lineHeight: 1 }}>H</span>
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "2rem" }}>
+                <HerculesLogo size={52} />
                 <div>
-                  <div style={{ ...DF, fontSize: 20, letterSpacing: "0.12em" }}>HERCULES</div>
-                  <div style={{ ...MF, fontSize: 8, color: "#B3B3B3", letterSpacing: "0.35em" }}>
-                    FITNESS
+                  <div style={{ ...DF, fontSize: 22, letterSpacing: "0.12em" }}>HERCULES</div>
+                  <div style={{ ...MF, fontSize: 9, color: "#B3B3B3", letterSpacing: "0.35em" }}>
+                    FITNESS CENTRE
                   </div>
                 </div>
               </div>
               <p style={{ color: "#B3B3B3", fontSize: 13, lineHeight: 1.8, marginBottom: "1.75rem" }}>
-                12,000 sq ft of professional-grade training infrastructure on NH-65 Udgir Road,
-                in the heart of Bidar, Karnataka.
+                Professional-grade training infrastructure on New Jewargi Road,
+                in the heart of Kalaburagi, Karnataka.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                   <MapPin size={14} color={LIME} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ color: "#B3B3B3", fontSize: 13 }}>
-                    NH-65 Udgir Road, Bidar, Karnataka 585401
+                    2nd Floor, New Jewargi Rd, above Ola Showroom, State Bank Colony, Kalaburagi, Karnataka 585102
                   </span>
                 </div>
                 <a
-                  href="tel:+918000000000"
+                  href="tel:+919900897907"
                   style={{ display: "flex", gap: 10, alignItems: "center", color: "#B3B3B3", textDecoration: "none", fontSize: 13, transition: "color 0.2s" }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#B3B3B3")}
                 >
-                  <Phone size={13} color={LIME} /> +91 80000 00000
+                  <Phone size={13} color={LIME} /> +91 99008 97907
                 </a>
                 <a
-                  href="https://wa.me/918000000000"
+                  href="https://wa.me/919900897907"
                   style={{ display: "flex", gap: 10, alignItems: "center", color: "#B3B3B3", textDecoration: "none", fontSize: 13, transition: "color 0.2s" }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#25D366")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#B3B3B3")}
@@ -1663,7 +1989,7 @@ export default function App() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <MapPin size={14} color={LIME} />
                     <span style={{ ...MF, fontSize: 9, color: "#FFF", letterSpacing: "0.1em" }}>
-                      HERCULES FITNESS CENTRE — KALABURAGI
+                      HERCULES FITNESS — KALABURAGI
                     </span>
                   </div>
 
@@ -1695,30 +2021,75 @@ export default function App() {
               <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.28em", marginBottom: "1.5rem" }}>
                 FREE CONSULTATION
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {["Full Name", "Phone Number", "Email Address"].map((f) => (
-                  <input
-                    key={f}
-                    type="text"
-                    placeholder={f}
-                    style={{
-                      background: "rgba(255,255,255,0.035)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      color: "#fff",
-                      padding: "12px 14px",
-                      borderRadius: 2,
-                      ...MF,
-                      fontSize: 11,
-                      outline: "none",
-                      transition: "border-color 0.2s",
-                      width: "100%",
-                      boxSizing: "border-box",
-                    }}
-                    onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = `${LIME}45`)}
-                    onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.07)")}
-                  />
-                ))}
+              <form onSubmit={handleConsultationSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <input
+                  type="text"
+                  placeholder="Full Name *"
+                  required
+                  value={consultName}
+                  onChange={(e) => setConsultName(e.target.value)}
+                  style={{
+                    background: "rgba(255,255,255,0.035)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "#fff",
+                    padding: "12px 14px",
+                    borderRadius: 2,
+                    ...MF,
+                    fontSize: 11,
+                    outline: "none",
+                    transition: "border-color 0.2s",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = `${LIME}45`)}
+                  onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.07)")}
+                />
+                <input
+                  type="tel"
+                  placeholder="Phone Number *"
+                  required
+                  value={consultPhone}
+                  onChange={(e) => setConsultPhone(e.target.value)}
+                  style={{
+                    background: "rgba(255,255,255,0.035)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "#fff",
+                    padding: "12px 14px",
+                    borderRadius: 2,
+                    ...MF,
+                    fontSize: 11,
+                    outline: "none",
+                    transition: "border-color 0.2s",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = `${LIME}45`)}
+                  onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.07)")}
+                />
+                <input
+                  type="email"
+                  placeholder="Email Address (Optional)"
+                  value={consultEmail}
+                  onChange={(e) => setConsultEmail(e.target.value)}
+                  style={{
+                    background: "rgba(255,255,255,0.035)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    color: "#fff",
+                    padding: "12px 14px",
+                    borderRadius: 2,
+                    ...MF,
+                    fontSize: 11,
+                    outline: "none",
+                    transition: "border-color 0.2s",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = `${LIME}45`)}
+                  onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.07)")}
+                />
                 <select
+                  value={consultGoal}
+                  onChange={(e) => setConsultGoal(e.target.value)}
                   style={{
                     background: "#0D0D0D",
                     border: "1px solid rgba(255,255,255,0.07)",
@@ -1733,14 +2104,49 @@ export default function App() {
                     boxSizing: "border-box",
                   }}
                 >
-                  <option>Goal: Fat Loss</option>
-                  <option>Goal: Muscle Gain</option>
-                  <option>Goal: Body Recomposition</option>
-                  <option>Goal: Endurance Training</option>
-                  <option>Goal: Combat Sports</option>
-                  <option>Goal: General Fitness</option>
+                  <option value="Goal: Fat Loss">Goal: Fat Loss</option>
+                  <option value="Goal: Muscle Gain">Goal: Muscle Gain</option>
+                  <option value="Goal: Body Recomposition">Goal: Body Recomposition</option>
+                  <option value="Goal: Endurance Training">Goal: Endurance Training</option>
+                  <option value="Goal: Combat Sports">Goal: Combat Sports</option>
+                  <option value="Goal: General Fitness">Goal: General Fitness</option>
                 </select>
+
+                {/* Personal Training Coach Choice Dropdown (Optional) */}
+                <select
+                  value={consultCoach}
+                  onChange={(e) => setConsultCoach(e.target.value)}
+                  style={{
+                    background: "#0D0D0D",
+                    border: "1px solid rgba(216, 255, 62, 0.25)",
+                    color: LIME,
+                    padding: "12px 14px",
+                    borderRadius: 2,
+                    ...MF,
+                    fontSize: 11,
+                    outline: "none",
+                    cursor: "pointer",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="No Specific Coach (General Guidance)">
+                    🏋️ Select PT Coach (Optional) — Any Certified Coach
+                  </option>
+                  {(siteData.coaches || defaultSiteData.coaches).map((coach) => {
+                    const coachName = coach.title || (coach as any).name || "Coach";
+                    const coachSpecialty = coach.subtitle || (coach as any).role || "Certified Trainer";
+                    const coachMeta = coach.meta || (coach as any).experience || "";
+                    return (
+                      <option key={coach.id} value={`Coach ${coachName} (${coachSpecialty})`}>
+                        🏋️ Coach {coachName} — {coachSpecialty} {coachMeta ? `[${coachMeta}]` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+
                 <button
+                  type="submit"
                   style={{
                     ...MF,
                     fontSize: 10,
@@ -1759,9 +2165,56 @@ export default function App() {
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
                 >
-                  BOOK FREE CONSULTATION
+                  {consultSubmitted ? "✓ ENQUIRY LOGGED! (OPENING WHATSAPP)" : "BOOK FREE CONSULTATION"}
                 </button>
-              </div>
+              </form>
+            </div>
+          </div>
+
+          {/* ⚡ SEO-READY BLOG & FITNESS GUIDES INTERNAL LINKING */}
+          <div
+            id="blog"
+            style={{
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+              paddingTop: "2.5rem",
+              marginBottom: "3rem",
+            }}
+          >
+            <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.28em", marginBottom: "1.25rem" }}>
+              FITNESS GUIDES & LOCAL ARTICLES — KALABURAGI
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "12px 24px",
+              }}
+            >
+              {(siteData.blogs || defaultSiteData.blogs).map((blog) => (
+                <button
+                  key={blog.id}
+                  onClick={() => setSelectedBlog(blog)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    color: "#A1A1AA",
+                    fontSize: 13,
+                    fontFamily: '"DM Sans", sans-serif',
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    transition: "color 0.2s",
+                    lineHeight: 1.5,
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#A1A1AA")}
+                >
+                  <span style={{ color: LIME, fontSize: 10 }}>›</span> {blog.title}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1778,31 +2231,139 @@ export default function App() {
             }}
           >
             <div style={{ ...MF, fontSize: 8, color: "#444", letterSpacing: "0.22em" }}>
-              © 2024 HERCULES FITNESS. ALL RIGHTS RESERVED. BIDAR, KARNATAKA.
+              © 2024 HERCULES FITNESS. ALL RIGHTS RESERVED. KALABURAGI, KARNATAKA.
             </div>
-            <div style={{ display: "flex", gap: 24 }}>
-              {["PRIVACY", "TERMS", "REFUNDS"].map((item) => (
-                <a
-                  key={item}
-                  href="#"
-                  style={{
-                    ...MF,
-                    fontSize: 8,
-                    color: "#444",
-                    textDecoration: "none",
-                    letterSpacing: "0.2em",
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
-                >
-                  {item}
-                </a>
-              ))}
+            <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+              <button
+                onClick={() => setActivePolicyModal("privacy")}
+                style={{
+                  ...MF,
+                  fontSize: 8,
+                  color: "#444",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  letterSpacing: "0.2em",
+                  padding: 0,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+              >
+                PRIVACY POLICY
+              </button>
+              <button
+                onClick={() => setActivePolicyModal("terms")}
+                style={{
+                  ...MF,
+                  fontSize: 8,
+                  color: "#444",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  letterSpacing: "0.2em",
+                  padding: 0,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+              >
+                TERMS
+              </button>
+              <button
+                onClick={() => setActivePolicyModal("refunds")}
+                style={{
+                  ...MF,
+                  fontSize: 8,
+                  color: "#444",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  letterSpacing: "0.2em",
+                  padding: 0,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+              >
+                REFUNDS
+              </button>
+              <button
+                onClick={() => setIsAdminAuthOpen(true)}
+                style={{
+                  ...MF,
+                  fontSize: 8,
+                  color: LIME,
+                  background: "rgba(216, 255, 62, 0.08)",
+                  border: "1px solid rgba(216, 255, 62, 0.25)",
+                  padding: "4px 10px",
+                  borderRadius: 2,
+                  letterSpacing: "0.2em",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = LIME;
+                  (e.currentTarget as HTMLElement).style.color = "#080808";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "rgba(216, 255, 62, 0.08)";
+                  (e.currentTarget as HTMLElement).style.color = LIME;
+                }}
+              >
+                <ShieldCheck size={10} />
+                ADMIN
+              </button>
             </div>
           </div>
         </div>
       </footer>
+      </main>
+
+      {/* ─── ADMIN MODALS ─── */}
+      <AdminAuthModal
+        isOpen={isAdminAuthOpen}
+        onClose={() => setIsAdminAuthOpen(false)}
+        onSuccess={(authenticatedEmail) => {
+          setActiveAdminEmail(authenticatedEmail);
+          setIsAdminAuthOpen(false);
+          setIsAdminPanelOpen(true);
+        }}
+      />
+
+      <AdminControlPanel
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        siteData={siteData}
+        currentUserEmail={activeAdminEmail}
+        onSaveData={handleSaveSiteData}
+        onResetData={handleResetSiteData}
+        onLogout={() => setIsAdminPanelOpen(false)}
+      />
+
+      <WebInquiryModal
+        isOpen={!!inquiryPlan}
+        onClose={() => setInquiryPlan(null)}
+        selectedPlan={inquiryPlan}
+        siteData={siteData}
+        onUpdateSiteData={setSiteData}
+      />
+
+      <BlogArticleModal
+        isOpen={!!selectedBlog}
+        onClose={() => setSelectedBlog(null)}
+        blog={selectedBlog}
+      />
+
+      <PolicyReaderModal
+        isOpen={!!activePolicyModal}
+        onClose={() => setActivePolicyModal(null)}
+        policyType={activePolicyModal}
+        policies={siteData.policies || defaultSiteData.policies}
+      />
 
       {/* ─── GLOBAL STYLES ─────────────────────────────────────────── */}
       <style>{`
@@ -1921,7 +2482,7 @@ export default function App() {
         }
         .hf-pricing-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 16px;
         }
         .hf-calc-grid {
@@ -1940,16 +2501,22 @@ export default function App() {
           gap: 4rem;
         }
 
+        @media (max-width: 1200px) {
+          .hf-pricing-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
         @media (max-width: 1100px) {
           .hf-philo-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
           .hf-programs-grid { grid-template-columns: 1fr !important; }
           .hf-facility-grid { grid-template-columns: 1fr !important; }
           .hf-trainers-grid { grid-template-columns: repeat(2,1fr) !important; }
           .hf-transform-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
-          .hf-pricing-grid { grid-template-columns: 1fr !important; }
           .hf-calc-grid { grid-template-columns: 1fr !important; }
           .hf-testi-grid { grid-template-columns: 1fr !important; }
           .hf-footer-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
+        }
+        @media (max-width: 640px) {
+          .hf-pricing-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 560px) {
           .hf-trainers-grid { grid-template-columns: 1fr !important; }

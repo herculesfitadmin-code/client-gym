@@ -2,12 +2,12 @@ import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause, Volume2, VolumeX, Maximize2, X, Compass, MapPin } from "lucide-react";
 
-// Real Gym Photos attached by user
-import exteriorImg from "../../../public/gallery/gym_building_exterior_ola.jpg";
-import turfImg from "../../../public/gallery/gym_turf_squat_rack.jpg";
-import cableImg from "../../../public/gallery/gym_cable_crossover_benches.jpg";
-import dumbbellImg from "../../../public/gallery/gym_dumbbell_rack_kettlebells.jpg";
-import aerofitImg from "../../../public/gallery/gym_aerofit_bikes_cardio.jpg";
+// Real Gym Photos - SEO Optimized File Names for Kalaburagi Local Search
+import exteriorImg from "../../../public/gallery/best-gym-in-kalaburagi-hercules-fitness-ola-building-exterior.jpg";
+import turfImg from "../../../public/gallery/hercules-fitness-kalaburagi-squat-rack-functional-turf-area.jpg";
+import cableImg from "../../../public/gallery/hercules-fitness-kalaburagi-cable-crossover-bench-press-zone.jpg";
+import dumbbellImg from "../../../public/gallery/hercules-fitness-kalaburagi-dumbbell-rack-free-weights-section.jpg";
+import aerofitImg from "../../../public/gallery/hercules-fitness-kalaburagi-aerofit-cardio-bikes-treadmills.jpg";
 
 const LIME = "#D8FF3E";
 
@@ -79,6 +79,7 @@ export const GymAtmosphereSection: React.FC = () => {
   return (
     <section
       id="arena"
+      aria-label="Gym atmosphere and facility gallery section"
       style={{
         padding: "7rem 2rem 9rem",
         background: "#0A0A0C",
@@ -135,7 +136,7 @@ export const GymAtmosphereSection: React.FC = () => {
                   textTransform: "uppercase",
                 }}
               >
-                INSIDE LOOK & PORTFOLIO
+                THE ATHLETIC SANCTUARY
               </span>
             </div>
 
@@ -150,7 +151,7 @@ export const GymAtmosphereSection: React.FC = () => {
                 letterSpacing: "0.02em",
               }}
             >
-              INSIDE THE <span style={{ color: LIME }}>IRON SANCTUARY</span>
+              THE ATHLETE&apos;S <span style={{ color: LIME }}>HAVEN</span>
             </h2>
           </div>
 
@@ -163,7 +164,7 @@ export const GymAtmosphereSection: React.FC = () => {
                 lineHeight: 1.65,
               }}
             >
-              Explore our 12,000 sq ft facility in Kalaburagi. From heavy compound powerlifting platforms to cardio decks overlooking nature, take a look at the real training sanctuary.
+              Built out of passion by a 19-year heavyweight champion. Every platform, squat rack, and movement zone is engineered for focus, discipline, and long-term athletic transformation.
             </p>
           </div>
         </div>

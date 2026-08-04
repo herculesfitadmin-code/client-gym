@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Clock, ChevronRight, CheckCircle2 } from "lucide-react";
+import { LearnMoreModal, ModalContent } from "./LearnMoreModal";
 
 const LIME = "#D8FF3E";
 const RED = "#FF3E3E";
@@ -101,7 +102,7 @@ export const gymPrograms: ProgramItem[] = [
     duration: "90 MIN",
     difficulty: "GRUELING",
     tag: "GRIND",
-    color: BLUE,
+    color: LIME,
     desc: "Long-form cardio, SkiErg, Concept2 rowing, and lactate threshold conditioning for elite endurance athletes, hybrid competitors, and unyielding stamina development.",
     features: ["Athletic Performance", "Lactate Threshold", "Aerobic Capacity", "Stamina"],
     image: "https://images.unsplash.com/photo-1517963879433-6ad2b056d712?q=80&w=1200&auto=format&fit=crop",
@@ -129,9 +130,10 @@ interface StackedCardProps {
   program: ProgramItem;
   index: number;
   totalCards: number;
+  onLearnMore?: (data: ModalContent) => void;
 }
 
-const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalCards }) => {
+const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalCards, onLearnMore }) => {
   // Sticky top offset: exposed top header bar (34px) per card as cards stack on top
   const stickyTop = 90 + index * 34;
 
@@ -187,25 +189,14 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
           <div className="hf-stacked-card-content" style={{ height: "100%", justifyContent: "space-between" }}>
             <div>
               {/* Header Badge Row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1rem", flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    background: LIME,
-                    color: "#080808",
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontWeight: 800,
-                    fontSize: 11,
-                    padding: "5px 14px",
-                    borderRadius: 20,
-                    letterSpacing: "0.1em",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    boxShadow: "0 2px 10px rgba(216, 255, 62, 0.3)",
-                  }}
-                >
-                  CARD {program.cardNumber} / {program.totalCards}
-                </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  marginBottom: "1rem",
+                }}
+              >
                 <div
                   style={{
                     fontFamily: '"JetBrains Mono", monospace',
@@ -247,24 +238,6 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
               >
                 {program.subtitle}
               </div>
-
-              {/* Description */}
-              <p
-                style={{
-                  fontFamily: '"DM Sans", sans-serif',
-                  color: "#B3B3B3",
-                  fontSize: 13.5,
-                  lineHeight: 1.65,
-                  marginBottom: "1.25rem",
-                  maxWidth: 580,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {program.desc}
-              </p>
             </div>
 
             <div>
@@ -343,6 +316,38 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
                 >
                   ENROLL IN PROGRAM <ArrowRight size={14} />
                 </a>
+
+                <button
+                  onClick={() =>
+                    onLearnMore?.({
+                      badge: program.tag,
+                      title: program.name,
+                      subtitle: `${program.subtitle} • ${program.duration} • ${program.difficulty}`,
+                      fullDescription: `${program.desc}\n\nEquipment Provided: ${program.equipment}`,
+                      keyPoints: program.features,
+                    })
+                  }
+                  style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: program.color,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1px solid ${program.color}44`,
+                    padding: "11px 20px",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    letterSpacing: "0.15em",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = `${program.color}22`)}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255, 255, 255, 0.05)")}
+                >
+                  Learn More <ChevronRight size={13} />
+                </button>
 
                 <div
                   style={{
@@ -433,9 +438,12 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
 };
 
 export const ProgramStackedCardsSection: React.FC = () => {
+  const [modalData, setModalData] = useState<ModalContent | null>(null);
+
   return (
     <section
       id="programs"
+      aria-label="Training programs and fitness systems section"
       style={{
         padding: "6rem 2rem 10rem",
         background: "#08080A",
@@ -475,7 +483,7 @@ export const ProgramStackedCardsSection: React.FC = () => {
                   textTransform: "uppercase",
                 }}
               >
-                EXPERT TRAINING & SYSTEMS
+                ATHLETIC DISCIPLINES
               </span>
             </div>
             <h2
@@ -489,9 +497,9 @@ export const ProgramStackedCardsSection: React.FC = () => {
                 letterSpacing: "0.02em",
               }}
             >
-              PROGRAMS OFFERED.
+              TRAIN WITH
               <br />
-              <span style={{ color: LIME }}>UNMATCHED STANDARDS.</span>
+              <span style={{ color: LIME }}>ATHLETIC PURPOSE</span>
             </h2>
           </div>
 
@@ -538,10 +546,14 @@ export const ProgramStackedCardsSection: React.FC = () => {
               program={program}
               index={index}
               totalCards={gymPrograms.length}
+              onLearnMore={(data) => setModalData(data)}
             />
           ))}
         </div>
       </div>
+
+      {/* Learn More Modal */}
+      <LearnMoreModal isOpen={!!modalData} onClose={() => setModalData(null)} data={modalData} />
     </section>
   );
 };
