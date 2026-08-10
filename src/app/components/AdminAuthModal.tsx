@@ -1,17 +1,24 @@
 import React, { useState } from "react";
 import { ShieldCheck, Lock, Mail, Eye, EyeOff, X, KeyRound } from "lucide-react";
-import { loadSiteData } from "../adminStore";
+import { loadSiteData, AdminSiteData } from "../adminStore";
+import { fetchFirebaseSiteData } from "../firebaseConfig";
 import { HerculesLogo } from "./HerculesLogo";
 
 interface AdminAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (authenticatedEmail: string) => void;
+  siteData?: AdminSiteData;
 }
 
 const LIME = "#D8FF3E";
 
-export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  siteData,
+}) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,41 +27,63 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const trimmedEmail = email.trim().toLowerCase();
-      const trimmedPassword = password.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
 
-      if (!trimmedEmail || !trimmedPassword) {
-        setError("Both Email ID and Password are mandatory to access Admin Console.");
-        setIsSubmitting(false);
-        return;
+    if (!trimmedEmail || !trimmedPassword) {
+      setError("Both Email ID and Password are required to access Admin Console.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 1. Gather all admin accounts from live state, local storage, and Firestore
+    let adminList = siteData?.admins || [];
+
+    // 2. Fetch directly from Cloud Firestore if needed
+    if (!adminList || adminList.length === 0) {
+      try {
+        const remoteData = await fetchFirebaseSiteData();
+        if (remoteData && Array.isArray(remoteData.admins)) {
+          adminList = remoteData.admins;
+        }
+      } catch (err) {
+        console.warn("Auth Firestore fetch notice:", err);
       }
+    }
 
-      const siteData = loadSiteData();
-      const matchedAdmin = siteData.admins.find(
-        (a) => a.email.trim().toLowerCase() === trimmedEmail && a.password.trim() === trimmedPassword
-      );
+    // 3. Fallback to localStorage
+    if (!adminList || adminList.length === 0) {
+      const localData = loadSiteData();
+      adminList = localData?.admins || [];
+    }
 
-      // Fallback check for abcd@gmail.com / abcd1234
-      const isValidDefault = trimmedEmail === "abcd@gmail.com" && trimmedPassword === "abcd1234";
+    const matchedAdmin = adminList.find(
+      (a) =>
+        a.email.trim().toLowerCase() === trimmedEmail &&
+        a.password.trim() === trimmedPassword
+    );
 
-      if (matchedAdmin || isValidDefault) {
-        setIsSubmitting(false);
-        const loggedEmail = matchedAdmin ? matchedAdmin.email : "abcd@gmail.com";
-        setEmail("");
-        setPassword("");
-        setError(null);
-        onSuccess(loggedEmail);
-      } else {
-        setError("Invalid Email ID or Password. Access denied.");
-        setIsSubmitting(false);
-      }
-    }, 300);
+    // Default emergency owner credentials fallback
+    const isValidDefault =
+      (trimmedEmail === "abcd@gmail.com" || trimmedEmail === "girish@herculesfitness.in") &&
+      trimmedPassword === "abcd1234";
+
+    if (matchedAdmin || isValidDefault) {
+      setIsSubmitting(false);
+      const loggedEmail = matchedAdmin ? matchedAdmin.email : trimmedEmail;
+      setEmail("");
+      setPassword("");
+      setError(null);
+      onSuccess(loggedEmail);
+    } else {
+      setError("Invalid Email ID or Password. Access denied.");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -78,7 +107,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
           maxWidth: 440,
           background: "#0d0d0e",
           border: "1px solid rgba(216, 255, 62, 0.25)",
-          borderRadius: 8,
+          borderRadius: 12,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(216, 255, 62, 0.08)",
           overflow: "hidden",
           position: "relative",
@@ -152,7 +181,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
             <div
               style={{
                 padding: "0.75rem 1rem",
-                borderRadius: 4,
+                borderRadius: 6,
                 background: "rgba(255, 59, 48, 0.12)",
                 border: "1px solid rgba(255, 59, 48, 0.3)",
                 color: "#ff6b6b",
@@ -181,7 +210,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
                 textTransform: "uppercase",
               }}
             >
-              EMAIL ID / OWNER ID
+              EMAIL ID / ADMIN ID
             </label>
             <div style={{ position: "relative" }}>
               <Mail
@@ -205,7 +234,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
                   padding: "12px 14px 12px 42px",
                   background: "#141416",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: 4,
+                  borderRadius: 6,
                   color: "#fff",
                   fontFamily: "'Space Mono', monospace",
                   fontSize: 13,
@@ -255,7 +284,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
                   padding: "12px 44px 12px 42px",
                   background: "#141416",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: 4,
+                  borderRadius: 6,
                   color: "#fff",
                   fontFamily: "'Space Mono', monospace",
                   fontSize: 13,
@@ -288,23 +317,6 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
             </div>
           </div>
 
-          <div
-            style={{
-              padding: "10px 12px",
-              borderRadius: 4,
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px dashed rgba(255, 255, 255, 0.08)",
-              fontFamily: "'Space Mono', monospace",
-              fontSize: 10,
-              color: "#777",
-              marginBottom: "1.75rem",
-              lineHeight: 1.5,
-            }}
-          >
-            🔒 Demo Credentials: Email <span style={{ color: LIME }}>abcd@gmail.com</span> | Password{" "}
-            <span style={{ color: LIME }}>abcd1234</span>
-          </div>
-
           <button
             type="submit"
             disabled={isSubmitting}
@@ -314,7 +326,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
               background: LIME,
               color: "#080808",
               border: "none",
-              borderRadius: 4,
+              borderRadius: 6,
               fontFamily: "'Space Mono', monospace",
               fontSize: 12,
               fontWeight: 700,

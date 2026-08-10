@@ -1495,19 +1495,19 @@ function AdminsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; u
 
   const addAdmin = () => {
     if (!newEmail.trim()) { showToast("Email is required.", "error"); return; }
-    if (!newPassword.trim() || newPassword.length < 6) { showToast("Password must be at least 6 characters.", "error"); return; }
-    if (admins.find(a => a.email.toLowerCase() === newEmail.toLowerCase())) {
+    if (!newPassword.trim() || newPassword.length < 4) { showToast("Password must be at least 4 characters.", "error"); return; }
+    if (admins.find(a => a.email.toLowerCase() === newEmail.trim().toLowerCase())) {
       showToast("An admin with that email already exists.", "error"); return;
     }
     const newAdmin: AdminUser = {
       id: `admin-${Date.now()}`,
       email: newEmail.trim().toLowerCase(),
-      password: newPassword,
+      password: newPassword.trim(),
       role: newRole,
       addedAt: new Date().toISOString(),
     };
     updateDraft("admins", [...admins, newAdmin]);
-    showToast(`Admin ${newEmail} added!`, "success");
+    showToast(`Admin ${newEmail} added! Click 'Save Changes' to push to Firestore.`, "success");
     setNewEmail(""); setNewPassword(""); setNewRole("admin"); setShowAdd(false);
   };
 
@@ -1527,7 +1527,7 @@ function AdminsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; u
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <SectionHead title="ADMINS" subtitle="Manage who can access the admin panel." />
+      <SectionHead title="ADMINS & SECURITY" subtitle="Manage administrator credentials and system access." />
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
@@ -1545,18 +1545,18 @@ function AdminsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; u
 
       {/* Add Admin form */}
       {showAdd && (
-        <Card style={{ marginBottom: 20, border: `1px solid ${ACCENT}30` }}>
-          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>NEW ADMIN DETAILS</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Card style={{ marginBottom: 24, border: `1px solid ${ACCENT}40`, background: SURFACE2, padding: "20px" }}>
+          <div style={{ ...MF, fontSize: 11, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16, fontWeight: 700 }}>CREATE NEW ADMIN ACCOUNT</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
               <Field label="EMAIL ADDRESS">
-                <Input value={newEmail} onChange={setNewEmail} placeholder="name@example.com" type="email" />
+                <Input value={newEmail} onChange={setNewEmail} placeholder="newadmin@gym.com" type="email" />
               </Field>
-              <Field label="ROLE">
+              <Field label="ASSIGN ROLE">
                 <select
                   value={newRole}
                   onChange={e => setNewRole(e.target.value)}
-                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, padding: "11px 14px", borderRadius: 8, ...SF, fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", cursor: "pointer" }}
+                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, padding: "12px 14px", borderRadius: 8, ...SF, fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", cursor: "pointer" }}
                 >
                   <option value="super-admin">Super Admin</option>
                   <option value="admin">Admin</option>
@@ -1565,12 +1565,12 @@ function AdminsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; u
                 </select>
               </Field>
             </div>
-            <Field label="PASSWORD" hint="Minimum 6 characters">
-              <Input value={newPassword} onChange={setNewPassword} type="password" placeholder="Set a secure password" />
+            <Field label="PASSWORD" hint="Minimum 4 characters">
+              <Input value={newPassword} onChange={setNewPassword} type="text" placeholder="Enter password (e.g. admin123)" />
             </Field>
 
-            <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-              <Btn onClick={addAdmin}><UserPlus size={13} /> Add Admin</Btn>
+            <div style={{ display: "flex", gap: 10, paddingTop: 6 }}>
+              <Btn onClick={addAdmin}><UserPlus size={13} /> Save & Add Admin</Btn>
               <Btn variant="secondary" onClick={() => { setShowAdd(false); setNewEmail(""); setNewPassword(""); }}>Cancel</Btn>
             </div>
           </div>

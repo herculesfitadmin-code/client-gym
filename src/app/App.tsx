@@ -2615,6 +2615,7 @@ function MainApp() {
       <AdminAuthModal
         isOpen={isAdminAuthOpen}
         onClose={() => setIsAdminAuthOpen(false)}
+        siteData={siteData}
         onSuccess={(authenticatedEmail) => {
           setActiveAdminEmail(authenticatedEmail);
           setIsAdminAuthOpen(false);
