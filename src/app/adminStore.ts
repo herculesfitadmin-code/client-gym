@@ -90,12 +90,110 @@ export interface AdminSiteData {
   policies: LegalPolicies;
   googleSheetWebhookUrl?: string;
   enquiries?: EnquiryLead[];
+  cloudDbEndpointUrl?: string;
+}
+
+export const DEFAULT_CLOUD_DB_URL =
+  "https://jsonblob.com/api/jsonBlob/019fccdb-adc5-7279-b99d-038493c8679f";
+
+import {
+  fetchFirebaseSiteData,
+  pushToFirebase,
+} from "./firebaseConfig";
+
+export function sanitizeSiteData(raw: any): AdminSiteData {
+  if (!raw || typeof raw !== "object") return defaultSiteData;
+  return {
+    tagline: {
+      headlineMain: raw.tagline?.headlineMain || defaultSiteData.tagline.headlineMain,
+      headlineHighlight: raw.tagline?.headlineHighlight || defaultSiteData.tagline.headlineHighlight,
+      subtitle: raw.tagline?.subtitle || defaultSiteData.tagline.subtitle,
+      heroVideoUrl: raw.tagline?.heroVideoUrl || defaultSiteData.tagline.heroVideoUrl,
+      heroMetrics: Array.isArray(raw.tagline?.heroMetrics) && raw.tagline.heroMetrics.length > 0
+        ? raw.tagline.heroMetrics
+        : defaultSiteData.tagline.heroMetrics,
+    },
+    offer: {
+      enabled: typeof raw.offer?.enabled === "boolean" ? raw.offer.enabled : defaultSiteData.offer.enabled,
+      announcementText: raw.offer?.announcementText || defaultSiteData.offer.announcementText,
+      badgeText: raw.offer?.badgeText || defaultSiteData.offer.badgeText,
+      discountPercentage: typeof raw.offer?.discountPercentage === "number" ? raw.offer.discountPercentage : defaultSiteData.offer.discountPercentage,
+    },
+    plans: Array.isArray(raw.plans) && raw.plans.length > 0 ? raw.plans : defaultSiteData.plans,
+    coaches: Array.isArray(raw.coaches) && raw.coaches.length > 0 ? raw.coaches : defaultSiteData.coaches,
+    admins: Array.isArray(raw.admins) && raw.admins.length > 0 ? raw.admins : defaultSiteData.admins,
+    founder: {
+      image: raw.founder?.image || defaultSiteData.founder.image,
+      mediaType: raw.founder?.mediaType || defaultSiteData.founder.mediaType,
+      videoUrl: raw.founder?.videoUrl || defaultSiteData.founder.videoUrl,
+      quote: raw.founder?.quote || defaultSiteData.founder.quote,
+      quoteAuthor: raw.founder?.quoteAuthor || defaultSiteData.founder.quoteAuthor,
+      quoteSubtext: raw.founder?.quoteSubtext || defaultSiteData.founder.quoteSubtext,
+      beforeImage: raw.founder?.beforeImage || defaultSiteData.founder.beforeImage,
+      afterImage: raw.founder?.afterImage || defaultSiteData.founder.afterImage,
+    },
+    blogs: Array.isArray(raw.blogs) && raw.blogs.length > 0 ? raw.blogs : defaultSiteData.blogs,
+    policies: {
+      privacyPolicy: raw.policies?.privacyPolicy || defaultSiteData.policies.privacyPolicy,
+      termsAndConditions: raw.policies?.termsAndConditions || defaultSiteData.policies.termsAndConditions,
+      refundPolicy: raw.policies?.refundPolicy || defaultSiteData.policies.refundPolicy,
+    },
+    googleSheetWebhookUrl: raw.googleSheetWebhookUrl || defaultSiteData.googleSheetWebhookUrl,
+    enquiries: Array.isArray(raw.enquiries) ? raw.enquiries : [],
+    cloudDbEndpointUrl: raw.cloudDbEndpointUrl || defaultSiteData.cloudDbEndpointUrl,
+  };
+}
+
+export async function fetchCloudSiteData(
+  customUrl?: string
+): Promise<AdminSiteData | null> {
+  // First attempt Firebase Firestore Backend Database
+  const fbData = await fetchFirebaseSiteData();
+  if (fbData) return sanitizeSiteData(fbData);
+
+  // Fallback to JSONBlob Cloud Database
+  const url = customUrl || DEFAULT_CLOUD_DB_URL;
+  try {
+    const res = await fetch(url, { method: "GET" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === "object") {
+        return sanitizeSiteData(data);
+      }
+    }
+  } catch (e) {
+    console.error("Cloud DB Fetch Error:", e);
+  }
+  return null;
+}
+
+export async function pushToCloud(
+  data: AdminSiteData,
+  customUrl?: string
+): Promise<boolean> {
+  // Directly push to Firebase Firestore as primary database
+  const fbResult = await pushToFirebase(data);
+  if (fbResult) return true;
+
+  const url = customUrl || data.cloudDbEndpointUrl || DEFAULT_CLOUD_DB_URL;
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Cloud DB Push Error:", e);
+    return false;
+  }
 }
 
 export const defaultSiteData: AdminSiteData = {
+  cloudDbEndpointUrl: DEFAULT_CLOUD_DB_URL,
   tagline: {
     headlineMain: "BUILD A STRONGER BODY",
-    headlineHighlight: "WITH RIGHT GUIDANCE",
+    headlineHighlight: "YOU DON'T NEED TO BE FIT BEFORE YOU JOIN",
     subtitle:
       "Looking for a good gym in Kalaburagi? Hercules Fitness offers modern equipment, experienced trainers, a clean workout environment and affordable membership plans built on 19+ years of real coaching experience.",
     heroVideoUrl: "/hergirish_rotated.mp4",
@@ -272,7 +370,7 @@ export const defaultSiteData: AdminSiteData = {
 
     refundPolicy: `# Refund & Cancellation Policy\n\n**Effective Date:** August 4, 2026\n\nAt **Hercules Fitness**, we aim to provide maximum value and transparency for all gym members in Kalaburagi:\n\n## 1. Website Inquiry Offers\n* Discounts claimed via website inquiries (e.g. 25% Web Offer) are valid for 7 days from consultation booking.\n\n## 2. Membership Fee Refunds\n* Membership packages (1 Month, 3 Months, 6 Months, 12 Months) are strictly non-refundable once activated.\n* If a cancellation request is submitted before program activation, an administrative fee of ₹500 will be deducted.\n\n## 3. Membership Hold & Pause\n* Members on 6-month or 12-month plans can pause their active membership for up to 30 days due to medical reasons with valid documentation.\n\n## 4. Contact for Support\nFor any billing or membership questions, please contact management at:\nPhone: +91 99008 97907\nEmail: support@herculesfitness.in`,
   },
-  googleSheetWebhookUrl: "",
+  googleSheetWebhookUrl: "https://script.google.com/macros/s/AKfycbxAz8PdpXq_2io5DNn8ve1j8lbrN99TXXp3WPaytApIugnlFl-mGFt95huCcFpBcmSF2A/exec",
   enquiries: [],
 };
 
@@ -283,20 +381,7 @@ export function loadSiteData(): AdminSiteData {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return {
-        tagline: { ...defaultSiteData.tagline, ...(parsed.tagline || {}) },
-        offer: { ...defaultSiteData.offer, ...(parsed.offer || {}) },
-        plans: parsed.plans && Array.isArray(parsed.plans) && parsed.plans.length === 4
-          ? parsed.plans
-          : defaultSiteData.plans,
-        coaches: parsed.coaches && Array.isArray(parsed.coaches) ? parsed.coaches : defaultSiteData.coaches,
-        admins: parsed.admins && Array.isArray(parsed.admins) ? parsed.admins : defaultSiteData.admins,
-        founder: { ...defaultSiteData.founder, ...(parsed.founder || {}) },
-        blogs: parsed.blogs && Array.isArray(parsed.blogs) ? parsed.blogs : defaultSiteData.blogs,
-        policies: { ...defaultSiteData.policies, ...(parsed.policies || {}) },
-        googleSheetWebhookUrl: parsed.googleSheetWebhookUrl || "",
-        enquiries: parsed.enquiries && Array.isArray(parsed.enquiries) ? parsed.enquiries : [],
-      };
+      return sanitizeSiteData(parsed);
     }
   } catch (e) {
     console.error("Failed to load site data from localStorage:", e);
@@ -304,12 +389,14 @@ export function loadSiteData(): AdminSiteData {
   return defaultSiteData;
 }
 
-export function saveSiteData(data: AdminSiteData): void {
+export async function saveSiteData(data: AdminSiteData): Promise<{ success: boolean; error?: string }> {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.error("Failed to save site data to localStorage:", e);
   }
+  // ⚡ Push directly to Firebase Firestore Database on every save!
+  return await pushToFirebase(data);
 }
 
 export function recordEnquiryLead(

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Phone,
   Menu,
@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Tag as TagIcon,
   ShieldCheck,
+  MoreHorizontal,
 } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 import Lenis from "lenis";
@@ -19,13 +20,15 @@ import { TestimonialsSection } from "./components/TestimonialsSection";
 import { CoachesStackedCardsSection } from "./components/CoachesStackedCards";
 import { GymAtmosphereSection } from "./components/GymAtmosphereSection";
 import { FounderStorySection } from "./components/FounderStorySection";
+import { AthleteCertificateCarouselSection } from "./components/AthleteCertificateCarouselSection";
 import { AdminAuthModal } from "./components/AdminAuthModal";
 import { AdminControlPanel } from "./components/AdminControlPanel";
-import { loadSiteData, saveSiteData, recordEnquiryLead, defaultSiteData, AdminSiteData, PricingPlan, BlogPost } from "./adminStore";
+import { loadSiteData, saveSiteData, fetchCloudSiteData, pushToCloud, recordEnquiryLead, defaultSiteData, AdminSiteData, PricingPlan, BlogPost } from "./adminStore";
 import { WebInquiryModal } from "./components/WebInquiryModal";
 import { HerculesLogo } from "./components/HerculesLogo";
 import { BlogArticleModal } from "./components/BlogArticleModal";
 import { PolicyReaderModal } from "./components/PolicyReaderModal";
+import { subscribeToFirebaseSiteData } from "../lib/firebase";
 
 import girishBefore from "../../public/transformations/girish_before.png";
 import girishAfter from "../../public/transformations/girish_after.png";
@@ -350,27 +353,93 @@ function MetricCard({
 }) {
   return (
     <div>
-      <div style={{ ...DF, fontSize: "clamp(1.8rem, 3vw, 2.5rem)", color, lineHeight: 1 }}>
+      <div style={{ ...DF, fontSize: "clamp(2.2rem, 3.8vw, 3.2rem)", color: color === "#fff" ? "#FFFFFF" : color, fontWeight: 900, lineHeight: 1, textShadow: "0 4px 18px rgba(0,0,0,0.85)" }}>
         {val}
       </div>
-      <div style={{ ...MF, fontSize: 9, color: "#B3B3B3", letterSpacing: "0.2em", marginTop: 5 }}>
+      <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.18em", marginTop: 6, fontWeight: 800 }}>
         {label}
       </div>
     </div>
   );
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-export default function App() {
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("React ErrorBoundary caught error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ background: "#080808", color: "#fff", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", fontFamily: "sans-serif" }}>
+          <h2 style={{ fontSize: 24, color: "#D8FF3E", marginBottom: 12 }}>Hercules Fitness Kalaburagi</h2>
+          <p style={{ color: "#A3A3A3", marginBottom: 16, maxWidth: 500, lineHeight: 1.6 }}>A rendering issue occurred. Details below:</p>
+          <div style={{ background: "#18181C", border: "1px solid rgba(255,62,62,0.4)", color: "#FF6B6B", padding: "12px 18px", borderRadius: 8, fontFamily: "monospace", fontSize: 12, maxWidth: 600, textAlign: "left", marginBottom: 20, wordBreak: "break-word" }}>
+            {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
+          </div>
+          <button
+            onClick={() => {
+              try { localStorage.removeItem("hercules_admin_site_data_v9"); } catch (e) {}
+              window.location.reload();
+            }}
+            style={{ background: "#D8FF3E", color: "#080808", border: "none", padding: "14px 28px", borderRadius: 8, fontWeight: "bold", cursor: "pointer", fontSize: 14 }}
+          >
+            Reset Cache & Reload Website
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MainApp() {
   const [siteData, setSiteData] = useState<AdminSiteData>(() => loadSiteData());
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [activeAdminEmail, setActiveAdminEmail] = useState("abcd@gmail.com");
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  // Auto-detect /admin URL route
+  useEffect(() => {
+    if (
+      window.location.pathname === "/admin" ||
+      window.location.pathname === "/admin/" ||
+      window.location.hash === "#admin"
+    ) {
+      setIsAdminAuthOpen(true);
+    }
+  }, []);
 
-  const handleSaveSiteData = (newData: AdminSiteData) => {
+  // ⚡ Firebase & Cloud Database Fetching & Live Sync across all devices worldwide
+  useEffect(() => {
+    fetchCloudSiteData().then((cloudData) => {
+      if (cloudData) {
+        setSiteData(cloudData);
+      }
+    });
+
+    // Real-time Firestore snapshot listener for instant live updates
+    const unsubscribe = subscribeToFirebaseSiteData((cloudData) => {
+      if (cloudData) {
+        setSiteData(cloudData);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleSaveSiteData = async (newData: AdminSiteData) => {
     setSiteData(newData);
-    saveSiteData(newData);
+    return await saveSiteData(newData);
   };
 
   const handleResetSiteData = () => {
@@ -510,9 +579,20 @@ export default function App() {
     [isDragging]
   );
 
+  // Handle-only slider — only the center button initiates drag
+  const handleSliderHandleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+  const handleSliderHandleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => handleSliderMove(e.clientX);
-    const onTouch = (e: TouchEvent) => handleSliderMove(e.touches[0].clientX);
+    const onTouch = (e: TouchEvent) => { if (isDragging) handleSliderMove(e.touches[0].clientX); };
     const onUp = () => setIsDragging(false);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("touchmove", onTouch);
@@ -560,6 +640,7 @@ export default function App() {
       {/* ─── SCROLL-TRIGGERED NEON ANNOUNCEMENT POPUP ─── */}
       {siteData.offer.enabled && hasScrolled && !offerDismissed && (
         <div
+          className="hf-offer-popup"
           style={{
             position: "fixed",
             bottom: 24,
@@ -744,12 +825,13 @@ export default function App() {
                 color: "#080808",
                 background: LIME,
                 padding: "9px 20px",
-                borderRadius: 2,
-                fontWeight: 700,
+                borderRadius: 50,
+                fontWeight: 800,
                 textDecoration: "none",
                 letterSpacing: "0.15em",
                 transition: "opacity 0.2s",
                 whiteSpace: "nowrap",
+                boxShadow: "0 0 15px rgba(216,255,62,0.3)",
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
@@ -759,56 +841,174 @@ export default function App() {
             <button
               className="hf-mobile-btn"
               onClick={() => setNavOpen(!navOpen)}
+              aria-label="Toggle navigation menu"
               style={{
-                background: "none",
-                border: "none",
-                color: "#fff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: navOpen ? "rgba(216,255,62,0.15)" : "rgba(255,255,255,0.06)",
+                border: `1px solid ${navOpen ? LIME : "rgba(255,255,255,0.18)"}`,
+                borderRadius: 50,
+                padding: "7px 14px",
+                color: navOpen ? LIME : "#FFFFFF",
                 cursor: "pointer",
-                lineHeight: 0,
-                padding: 0,
+                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                boxShadow: navOpen ? "0 0 20px rgba(216,255,62,0.25)" : "none",
               }}
             >
-              {navOpen ? <X size={22} /> : <Menu size={22} />}
+              {navOpen ? <X size={18} /> : <MoreHorizontal size={18} color={LIME} />}
+              <span style={{ ...MF, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em" }}>
+                MENU
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Floating Curved Mobile/Tablet Menu Overlay */}
         {navOpen && (
           <div
             style={{
-              borderTop: "1px solid rgba(255,255,255,0.05)",
-              padding: "1rem 2rem 1.5rem",
-              background: "rgba(8,8,8,0.95)",
+              position: "fixed",
+              top: 80,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "calc(100% - 32px)",
+              maxWidth: 480,
+              background: "rgba(14, 14, 18, 0.96)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(216, 255, 62, 0.3)",
+              borderRadius: 24,
+              padding: "1.5rem",
+              boxShadow: "0 25px 60px rgba(0,0,0,0.9), 0 0 40px rgba(216, 255, 62, 0.15)",
+              zIndex: 9999,
+              animation: "menuPopupSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
             }}
           >
-            {[
-              { label: "FOUNDER STORY", href: "#founder-story" },
-              { label: "PHILOSOPHY", href: "#philosophy" },
-              { label: "PROGRAMS", href: "#programs" },
-              { label: "ROSTER", href: "#trainers" },
-              { label: "MENTORSHIP", href: "#membership" },
-              { label: "FAQ", href: "#faq" },
-              { label: "ARTICLES", href: "#blog" },
-            ].map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1rem",
+                paddingBottom: "0.75rem",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.2em", fontWeight: 700 }}>
+                NAVIGATION MENU
+              </div>
+              <button
                 onClick={() => setNavOpen(false)}
                 style={{
-                  display: "block",
-                  ...MF,
-                  fontSize: 12,
-                  color: "#B3B3B3",
-                  padding: "13px 0",
-                  textDecoration: "none",
-                  letterSpacing: "0.22em",
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "none",
+                  borderRadius: 50,
+                  width: 30,
+                  height: 30,
+                  color: "#FFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
                 }}
               >
-                {item.label}
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: "1.25rem" }}>
+              {[
+                { label: "FOUNDER STORY", href: "#head-coach" },
+                { label: "PHILOSOPHY", href: "#philosophy" },
+                { label: "PROGRAMS", href: "#programs" },
+                { label: "CERTIFICATES", href: "#athlete-certificates" },
+                { label: "COACH ROSTER", href: "#trainers" },
+                { label: "MENTORSHIP", href: "#membership" },
+                { label: "FAQ", href: "#faq" },
+                { label: "ARTICLES", href: "#blog" },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setNavOpen(false)}
+                  style={{
+                    ...MF,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: "#E4E4E7",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 50,
+                    padding: "12px 14px",
+                    textDecoration: "none",
+                    letterSpacing: "0.1em",
+                    textAlign: "center",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = LIME;
+                    el.style.color = "#080808";
+                    el.style.borderColor = LIME;
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = "rgba(255,255,255,0.04)";
+                    el.style.color = "#E4E4E7";
+                    el.style.borderColor = "rgba(255,255,255,0.08)";
+                  }}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", display: "flex", gap: 10 }}>
+              <a
+                href="tel:+919900897907"
+                style={{
+                  flex: 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#FFF",
+                  borderRadius: 50,
+                  padding: "12px",
+                  textDecoration: "none",
+                  ...MF,
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                }}
+              >
+                <Phone size={14} color={LIME} /> CALL US
               </a>
-            ))}
+              <a
+                href="#membership"
+                onClick={() => setNavOpen(false)}
+                style={{
+                  flex: 1.5,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: LIME,
+                  color: "#080808",
+                  borderRadius: 50,
+                  padding: "12px",
+                  textDecoration: "none",
+                  ...MF,
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  boxShadow: "0 4px 16px rgba(216,255,62,0.3)",
+                }}
+              >
+                EARN MENTORSHIP <ArrowRight size={14} />
+              </a>
+            </div>
           </div>
         )}
       </nav>
@@ -869,6 +1069,7 @@ export default function App() {
 
         {/* Content */}
         <div
+          className="hf-hero-content"
           style={{
             position: "relative",
             zIndex: 2,
@@ -881,16 +1082,16 @@ export default function App() {
             padding: "0 2rem 5rem",
           }}
         >
-          <SectionLabel>KALABURAGI, KARNATAKA — EST. 2019</SectionLabel>
-
           <h1
             style={{
               ...DF,
-              fontSize: "clamp(3.2rem, 8.5vw, 8.5rem)",
-              lineHeight: 0.88,
+              fontSize: "clamp(2.1rem, 8.5vw, 8.5rem)",
+              lineHeight: 0.9,
               letterSpacing: "-0.01em",
               textTransform: "uppercase",
-              marginBottom: "1.5rem",
+              marginBottom: "1rem",
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
             }}
           >
             {siteData.tagline.headlineMain}
@@ -901,68 +1102,73 @@ export default function App() {
           <p
             style={{
               color: "#B3B3B3",
-              fontSize: "clamp(14px, 1.4vw, 17px)",
+              fontSize: "clamp(13px, 1.4vw, 17px)",
               maxWidth: 500,
               lineHeight: 1.75,
-              marginBottom: "2.5rem",
+              marginBottom: "1.5rem",
             }}
           >
             {siteData.tagline.subtitle}
           </p>
 
           <div
-            style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: "4rem" }}
+            className="hf-hero-cta"
+            style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "2rem" }}
           >
             <a
-              href="#founder-story"
-              title="Our Story: Building a Trusted Gym in Kalaburagi"
+              href="#head-coach"
+              title="Our Story: Building the most trusted gym in Kalaburagi"
+              className="hf-hero-btn-primary"
               style={{
                 ...MF,
-                fontSize: 10,
+                fontSize: 10.5,
                 background: LIME,
                 color: "#080808",
-                padding: "13px 28px",
-                borderRadius: 2,
-                fontWeight: 700,
+                padding: "14px 24px",
+                borderRadius: 50,
+                fontWeight: 800,
                 textDecoration: "none",
-                letterSpacing: "0.15em",
+                letterSpacing: "0.08em",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                transition: "opacity 0.2s",
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+                boxShadow: "0 0 20px rgba(216,255,62,0.35)",
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
-              OUR STORY: BUILDING A TRUSTED GYM IN KALABURAGI <ArrowRight size={13} />
+              OUR STORY: BUILDING THE MOST TRUSTED GYM IN KALABURAGI <ArrowRight size={13} />
             </a>
             <a
               href="#philosophy"
               style={{
                 ...MF,
-                fontSize: 10,
+                fontSize: 10.5,
                 color: "#fff",
-                padding: "13px 28px",
-                borderRadius: 2,
-                fontWeight: 600,
+                padding: "14px 24px",
+                borderRadius: 50,
+                fontWeight: 700,
                 textDecoration: "none",
-                letterSpacing: "0.15em",
-                border: "1px solid rgba(255,255,255,0.2)",
-                background: "rgba(255,255,255,0.04)",
+                letterSpacing: "0.08em",
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "rgba(255,255,255,0.06)",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
                 transition: "all 0.2s",
+                whiteSpace: "nowrap",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.borderColor = "rgba(255,255,255,0.45)";
-                el.style.background = "rgba(255,255,255,0.08)";
+                el.style.background = "rgba(255,255,255,0.12)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255,255,255,0.2)";
-                el.style.background = "rgba(255,255,255,0.04)";
+                el.style.borderColor = "rgba(255,255,255,0.25)";
+                el.style.background = "rgba(255,255,255,0.06)";
               }}
             >
               OUR PHILOSOPHY <ArrowRight size={13} />
@@ -970,7 +1176,7 @@ export default function App() {
           </div>
 
           {/* Metrics */}
-          <div style={{ display: "flex", gap: "clamp(24px,5vw,60px)", flexWrap: "wrap" }}>
+          <div className="hf-hero-metrics" style={{ display: "flex", gap: "clamp(16px,5vw,60px)", flexWrap: "wrap" }}>
             {(siteData.tagline.heroMetrics || defaultSiteData.tagline.heroMetrics!).map(({ value, label }) => (
               <MetricCard key={label} val={value} label={label} />
             ))}
@@ -996,8 +1202,33 @@ export default function App() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════ FOUNDER STORY & PHILOSOPHY QUOTE */}
+      {/* ═══════════════════════════════════════ CURVED WAVE SEPARATOR */}
+      <div style={{ position: "relative", marginTop: "-2px", zIndex: 3, lineHeight: 0 }}>
+        <svg
+          viewBox="0 0 1440 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ width: "100%", display: "block" }}
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M0 60 C240 20, 480 95, 720 55 S1200 15, 1440 65 L1440 100 L0 100 Z"
+            fill="#080808"
+          />
+          <path
+            d="M0 60 C240 20, 480 95, 720 55 S1200 15, 1440 65"
+            stroke="rgba(216,255,62,0.12)"
+            strokeWidth="1"
+            fill="none"
+          />
+        </svg>
+      </div>
+
+      {/* ═══════════════════════════════════════ FOUNDER STORY & HEAD COACH */}
       <FounderStorySection founderData={siteData.founder} />
+
+      {/* ═══════════════════════════════════════ ATHLETE CERTIFICATES 3D CAROUSEL */}
+      <AthleteCertificateCarouselSection />
 
       {/* ═══════════════════════════════════════ ATHLETIC PHILOSOPHY */}
       <section
@@ -1015,33 +1246,23 @@ export default function App() {
           }}
         />
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
-          <div className="hf-philo-grid">
-            <div>
-              <SectionLabel>OUR APPROACH</SectionLabel>
-              <h2
-                style={{
-                  ...DF,
-                  fontSize: "clamp(2.4rem, 5vw, 4.8rem)",
-                  lineHeight: 0.9,
-                  textTransform: "uppercase",
-                }}
-              >
-                FITNESS THAT WORKS
-                <br />
-                <span style={{ color: LIME }}>IN REAL LIFE</span>
-              </h2>
-              <p
-                style={{
-                  color: "#B3B3B3",
-                  lineHeight: 1.8,
-                  marginTop: "2rem",
-                  fontSize: 15,
-                  maxWidth: 420,
-                }}
-              >
-                You don&apos;t need expensive gear or complicated workouts. You just need clear guidance, consistent effort, and a coach who genuinely cares about your progress.
-              </p>
-            </div>
+          <div style={{ textAlign: "center", margin: "0 auto 3.5rem", maxWidth: 800 }}>
+            <h2
+              style={{
+                ...DF,
+                fontSize: "clamp(2.4rem, 5vw, 4.8rem)",
+                lineHeight: 0.9,
+                textTransform: "uppercase",
+                textAlign: "center",
+              }}
+            >
+              FITNESS THAT WORKS
+              <br />
+              <span style={{ color: LIME }}>IN REAL LIFE</span>
+            </h2>
+          </div>
+
+          <div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {[
@@ -1126,22 +1347,24 @@ export default function App() {
       {/* ═══════════════════════════════════════ TRANSFORMATIONS */}
       <section aria-label="Fitness transformation results" style={{ padding: "8rem 2rem", background: "#080808" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", maxWidth: 800, margin: "0 auto 3.5rem" }}>
+            <h2
+              style={{
+                ...DF,
+                fontSize: "clamp(2.4rem, 5vw, 4.2rem)",
+                textTransform: "uppercase",
+                lineHeight: 0.92,
+                textAlign: "center",
+              }}
+            >
+              THE PROOF IS
+              <br />
+              <span style={{ color: LIME }}>IN THE CHARACTER</span>
+            </h2>
+          </div>
+
           <div className="hf-transform-grid">
             <div>
-              <SectionLabel>FOUNDER & MEMBER RESULTS</SectionLabel>
-              <h2
-                style={{
-                  ...DF,
-                  fontSize: "clamp(2.4rem, 5vw, 3.6rem)",
-                  textTransform: "uppercase",
-                  lineHeight: 0.92,
-                  marginBottom: "2.5rem",
-                }}
-              >
-                THE PROOF IS
-                <br />
-                <span style={{ color: LIME }}>IN THE CHARACTER</span>
-              </h2>
 
               <div
                 style={{
@@ -1192,24 +1415,24 @@ export default function App() {
               </blockquote>
             </div>
 
-            {/* Before/After Slider */}
+            {/* Before/After Slider — drag ONLY via center handle button */}
             <div>
               <div
                 ref={sliderRef}
                 style={{
                   position: "relative",
-                  height: 520,
+                  height: "clamp(320px, 50vw, 520px)",
                   borderRadius: 8,
                   overflow: "hidden",
-                  cursor: "ew-resize",
+                  cursor: "default",
                   background: "#111",
                   userSelect: "none",
                   border: "1px solid rgba(255,255,255,0.1)",
+                  touchAction: "pan-y",
                 }}
-                onMouseDown={() => setIsDragging(true)}
-                onTouchStart={() => setIsDragging(true)}
+                /* NOTE: no onMouseDown / onTouchStart here — only the handle triggers drag */
               >
-                {/* After Image (Shredded Fit Body - Background) */}
+                {/* After Image — pointer-events: none so clicks don't trigger drag */}
                 <img
                   src={siteData.founder?.afterImage || girishAfter}
                   alt="Coach Girish after body transformation at Hercules Fitness Kalaburagi — lean and fit physique"
@@ -1220,10 +1443,13 @@ export default function App() {
                     height: "100%",
                     objectFit: "cover",
                     objectPosition: "top center",
+                    pointerEvents: "none",
+                    userSelect: "none",
                   }}
+                  draggable={false}
                 />
 
-                {/* Before Image (Bulky physique - Foreground overlay clipped dynamically) */}
+                {/* Before Image — pointer-events: none so clicks don't trigger drag */}
                 <img
                   src={siteData.founder?.beforeImage || girishBefore}
                   alt="Coach Girish before body transformation — showing starting physique"
@@ -1236,7 +1462,10 @@ export default function App() {
                     objectPosition: "top center",
                     clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`,
                     WebkitClipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`,
+                    pointerEvents: "none",
+                    userSelect: "none",
                   }}
+                  draggable={false}
                 />
 
                 {/* Labels */}
@@ -1252,6 +1481,7 @@ export default function App() {
                     padding: "4px 11px",
                     borderRadius: 2,
                     letterSpacing: "0.2em",
+                    pointerEvents: "none",
                   }}
                 >
                   BEFORE
@@ -1269,12 +1499,13 @@ export default function App() {
                     borderRadius: 2,
                     letterSpacing: "0.2em",
                     fontWeight: 700,
+                    pointerEvents: "none",
                   }}
                 >
                   AFTER
                 </div>
 
-                {/* Divider */}
+                {/* Divider line */}
                 <div
                   style={{
                     position: "absolute",
@@ -1284,27 +1515,40 @@ export default function App() {
                     width: 2,
                     background: LIME,
                     transform: "translateX(-50%)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* CENTER HANDLE — the ONLY element that initiates drag */}
+                <div
+                  onMouseDown={handleSliderHandleMouseDown}
+                  onTouchStart={handleSliderHandleTouchStart}
+                  role="slider"
+                  aria-label="Drag to compare before and after"
+                  aria-valuenow={Math.round(sliderPos)}
+                  aria-valuemin={5}
+                  aria-valuemax={95}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: `${sliderPos}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    background: LIME,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: `0 0 20px ${LIME}60, 0 4px 16px rgba(0,0,0,0.6)`,
+                    cursor: "ew-resize",
+                    zIndex: 10,
+                    touchAction: "none",
+                    transition: isDragging ? "none" : "left 0.1s ease",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      transform: "translate(-50%,-50%)",
-                      width: 38,
-                      height: 38,
-                      borderRadius: "50%",
-                      background: LIME,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: `0 0 20px ${LIME}60`,
-                    }}
-                  >
-                    <ChevronLeft size={13} color="#080808" />
-                    <ChevronRight size={13} color="#080808" />
-                  </div>
+                  <ChevronLeft size={14} color="#080808" />
+                  <ChevronRight size={14} color="#080808" />
                 </div>
               </div>
               <div
@@ -1317,7 +1561,7 @@ export default function App() {
                   letterSpacing: "0.25em",
                 }}
               >
-                DRAG TO COMPARE
+                DRAG THE CENTER BUTTON TO COMPARE
               </div>
             </div>
           </div>
@@ -1734,64 +1978,107 @@ export default function App() {
       <TestimonialsSection />
 
       {/* ═══════════════════════════════════════ FAQ */}
-      <section id="faq" aria-label="Frequently asked questions about Hercules Fitness Kalaburagi" style={{ padding: "8rem 2rem", background: "#09090A" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-            <SectionLabel>FAQ</SectionLabel>
+      <section id="faq" aria-label="Frequently asked questions about Hercules Fitness Kalaburagi" style={{ padding: "7rem 2rem", background: "#09090A", overflow: "hidden" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "3rem" }}>
             <h2
               style={{
                 ...DF,
                 fontSize: "clamp(2.4rem, 5vw, 4rem)",
                 textTransform: "uppercase",
                 lineHeight: 0.92,
+                textAlign: "center",
               }}
             >
               QUESTIONS
               <br />
               <span style={{ color: LIME }}>ANSWERED</span>
             </h2>
+            <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.15em", marginTop: 10 }}>
+              ← SWIPE HORIZONTALLY TO EXPLORE FAQS →
+            </div>
           </div>
 
-          <Accordion.Root type="single" collapsible style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {faqs.map((faq, i) => (
-              <Accordion.Item
-                key={i}
-                value={`item-${i}`}
-                style={{
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  background: "rgba(13,13,13,0.6)",
-                }}
-              >
-                <Accordion.Trigger
-                  className="hf-faq-trigger"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    width: "100%",
-                    padding: "1.5rem 1.75rem",
-                    background: "none",
-                    border: "none",
-                    color: "#fff",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                >
-                  <span style={{ ...MF, fontSize: 9, color: "rgba(255,255,255,0.18)", flexShrink: 0 }}>
-                    0{i + 1}
-                  </span>
-                  <span style={{ ...DF, fontSize: 18, letterSpacing: "0.04em", flex: 1 }}>
-                    {faq.q}
-                  </span>
-                  <ChevronDown size={15} color={LIME} className="hf-faq-chevron" style={{ flexShrink: 0, transition: "transform 0.28s" }} />
-                </Accordion.Trigger>
-                <Accordion.Content style={{ padding: "0 1.75rem 1.5rem 4.5rem" }}>
-                  <p style={{ color: "#B3B3B3", fontSize: 14, lineHeight: 1.85 }}>{faq.a}</p>
-                </Accordion.Content>
-              </Accordion.Item>
-            ))}
+          {/* Horizontal Scroll Track of 2-Pair Stacked FAQ Cards */}
+          <Accordion.Root type="single" collapsible>
+            <div
+              className="hf-faq-track"
+              style={{
+                display: "flex",
+                overflowX: "auto",
+                scrollSnapType: "x mandatory",
+                touchAction: "pan-y",
+                WebkitOverflowScrolling: "touch",
+                gap: "1.5rem",
+                paddingBottom: "1.5rem",
+                scrollbarWidth: "none",
+              }}
+            >
+              {Array.from({ length: Math.ceil(faqs.length / 2) }).map((_, pairIdx) => {
+                const pair = faqs.slice(pairIdx * 2, pairIdx * 2 + 2);
+                return (
+                  <div
+                    key={pairIdx}
+                    style={{
+                      flex: "0 0 85vw",
+                      maxWidth: 450,
+                      scrollSnapAlign: "start",
+                      background: "#0E0E11",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 20,
+                      padding: "1.25rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      boxShadow: "0 15px 35px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {pair.map((faq, itemIdx) => {
+                      const globalIdx = pairIdx * 2 + itemIdx;
+                      return (
+                        <Accordion.Item
+                          key={globalIdx}
+                          value={`item-${globalIdx}`}
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.07)",
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            background: "rgba(255,255,255,0.02)",
+                          }}
+                        >
+                          <Accordion.Trigger
+                            className="hf-faq-trigger"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              width: "100%",
+                              padding: "1.1rem 1.25rem",
+                              background: "none",
+                              border: "none",
+                              color: "#fff",
+                              cursor: "pointer",
+                              textAlign: "left",
+                            }}
+                          >
+                            <span style={{ ...MF, fontSize: 9, color: LIME, flexShrink: 0, fontWeight: 700 }}>
+                              0{globalIdx + 1}
+                            </span>
+                            <span style={{ ...DF, fontSize: 16, letterSpacing: "0.03em", flex: 1, lineHeight: 1.15 }}>
+                              {faq.q}
+                            </span>
+                            <ChevronDown size={14} color={LIME} className="hf-faq-chevron" style={{ flexShrink: 0, transition: "transform 0.28s" }} />
+                          </Accordion.Trigger>
+                          <Accordion.Content style={{ padding: "0 1.25rem 1.25rem 2.8rem" }}>
+                            <p style={{ color: "#B3B3B3", fontSize: 13.5, lineHeight: 1.7, margin: 0 }}>{faq.a}</p>
+                          </Accordion.Content>
+                        </Accordion.Item>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </Accordion.Root>
         </div>
       </section>
@@ -2220,6 +2507,7 @@ export default function App() {
 
           {/* Bottom bar */}
           <div
+            className="hf-footer-bottom"
             style={{
               borderTop: "1px solid rgba(255,255,255,0.05)",
               paddingTop: "2rem",
@@ -2233,7 +2521,7 @@ export default function App() {
             <div style={{ ...MF, fontSize: 8, color: "#444", letterSpacing: "0.22em" }}>
               © 2024 HERCULES FITNESS. ALL RIGHTS RESERVED. KALABURAGI, KARNATAKA.
             </div>
-            <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            <div className="hf-footer-bottom-links" style={{ display: "flex", gap: 24, alignItems: "center" }}>
               <button
                 onClick={() => setActivePolicyModal("privacy")}
                 style={{
@@ -2367,25 +2655,17 @@ export default function App() {
 
       {/* ─── GLOBAL STYLES ─────────────────────────────────────────── */}
       <style>{`
-        html.lenis, html.lenis body {
-          height: auto;
-        }
-        .lenis.lenis-smooth {
-          scroll-behavior: auto !important;
-        }
-        .lenis.lenis-smooth [data-lenis-prevent] {
-          overscroll-behavior: contain;
-        }
-        .lenis.lenis-stopped {
-          overflow: hidden;
-        }
-        .lenis.lenis-smooth iframe {
-          pointer-events: none;
-        }
+        html.lenis, html.lenis body { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+        .lenis.lenis-stopped { overflow: hidden; }
+        .lenis.lenis-smooth iframe { pointer-events: none; }
 
-        * { scrollbar-width: none; }
+        * { scrollbar-width: none; box-sizing: border-box; }
         *::-webkit-scrollbar { display: none; }
+        img { max-width: 100%; }
 
+        /* === GRID SYSTEMS === */
         .hf-stacked-card-grid {
           display: grid;
           grid-template-columns: 1fr 0.85fr;
@@ -2394,28 +2674,8 @@ export default function App() {
           padding: 2.5rem;
           min-height: 440px;
         }
-        .hf-stacked-card-content {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-        .hf-stacked-card-media {
-          height: 100%;
-          display: flex;
-          align-items: center;
-        }
-
-        @media (max-width: 960px) {
-          .hf-stacked-card-grid {
-            grid-template-columns: 1fr !important;
-            gap: 2rem !important;
-            padding: 1.5rem !important;
-          }
-          .hf-stacked-card-media {
-            height: 280px !important;
-            min-height: 280px !important;
-          }
-        }
+        .hf-stacked-card-content { display: flex; flex-direction: column; justify-content: center; }
+        .hf-stacked-card-media { height: 100%; display: flex; align-items: center; }
 
         .hf-testimonials-split {
           display: grid;
@@ -2423,88 +2683,48 @@ export default function App() {
           gap: 3.5rem;
           align-items: center;
         }
-
         .hf-review-card-item:hover {
           border-color: rgba(216, 255, 62, 0.3) !important;
           transform: translateY(-2px);
           box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
-
-        @media (max-width: 1024px) {
-          .hf-testimonials-split {
-            grid-template-columns: 1fr !important;
-            gap: 3rem !important;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .hf-marquee-columns {
-            grid-template-columns: 1fr !important;
-          }
-          .hf-marquee-box {
-            height: 480px !important;
-          }
-        }
-
         .hf-desktop-nav { display: none; }
-        @media (min-width: 768px) {
-          .hf-desktop-nav { display: flex !important; }
-          .hf-mobile-btn { display: none !important; }
-        }
-
         .hf-philo-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 6rem;
           align-items: center;
         }
-        .hf-programs-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-          align-items: start;
-        }
-        .hf-facility-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 1.5rem;
-        }
-        .hf-trainers-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
-        }
-        .hf-transform-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 5rem;
-          align-items: center;
-        }
-        .hf-pricing-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-        }
-        .hf-calc-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        .hf-testi-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 14px;
-        }
-        .hf-footer-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 4rem;
+        .hf-programs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+        .hf-facility-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+        .hf-trainers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .hf-transform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
+        .hf-pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .hf-calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .hf-testi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .hf-footer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4rem; }
+
+        @keyframes menuPopupSlide {
+          from { opacity: 0; transform: translate(-50%, -10px) scale(0.96); }
+          to { opacity: 1; transform: translate(-50%, 0) scale(1); }
         }
 
-        @media (max-width: 1200px) {
-          .hf-pricing-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        /* === TABLET 1024px === */
+        @media (max-width: 1024px) {
+          .hf-testimonials-split { grid-template-columns: 1fr !important; gap: 3rem !important; }
         }
 
+        /* === DESKTOP NAV BREAKPOINT (Only show full bar on wide screens >= 1180px) === */
+        @media (min-width: 1180px) {
+          .hf-desktop-nav { display: flex !important; }
+          .hf-mobile-btn { display: none !important; }
+        }
+        @media (max-width: 1179px) {
+          .hf-desktop-nav { display: none !important; }
+          .hf-mobile-btn { display: inline-flex !important; }
+        }
+
+        /* === TABLET 1100px === */
         @media (max-width: 1100px) {
           .hf-philo-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
           .hf-programs-grid { grid-template-columns: 1fr !important; }
@@ -2514,23 +2734,91 @@ export default function App() {
           .hf-calc-grid { grid-template-columns: 1fr !important; }
           .hf-testi-grid { grid-template-columns: 1fr !important; }
           .hf-footer-grid { grid-template-columns: 1fr !important; gap: 3rem !important; }
-        }
-        @media (max-width: 640px) {
-          .hf-pricing-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 560px) {
-          .hf-trainers-grid { grid-template-columns: 1fr !important; }
+          .hf-pricing-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .hf-stacked-card-grid { grid-template-columns: 1fr !important; gap: 2rem !important; padding: 1.5rem !important; }
+          .hf-stacked-card-media { height: 280px !important; min-height: 280px !important; }
         }
 
+        /* === MOBILE 640px === */
+        @media (max-width: 640px) {
+          .hf-pricing-grid { grid-template-columns: 1fr !important; }
+          .hf-marquee-columns { grid-template-columns: 1fr !important; }
+          .hf-marquee-box { height: 480px !important; }
+          .hf-hero-content { padding: 0 1rem 3rem !important; }
+          .hf-hero-cta { flex-direction: column !important; gap: 10px !important; }
+          .hf-hero-btn-primary { width: 100% !important; justify-content: center !important; }
+          .hf-hero-metrics { gap: 18px !important; flex-wrap: wrap !important; }
+        }
+
+        /* === MOBILE 480px === */
+        @media (max-width: 480px) {
+          section[aria-label], footer, section {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+          }
+          .hf-footer-grid { gap: 2rem !important; }
+          .hf-pricing-grid { grid-template-columns: 1fr !important; }
+          .hf-trainers-grid { grid-template-columns: 1fr !important; }
+          .hf-transform-grid { gap: 2rem !important; }
+        }
+
+        /* === SMALL MOBILE 360px === */
+        @media (max-width: 360px) {
+          .hf-hero-content { padding: 0 0.75rem 2rem !important; }
+        }
+
+        /* === OFFER POPUP MOBILE FIX === */
+        @media (max-width: 480px) {
+          .hf-offer-popup {
+            bottom: 12px !important;
+            right: 12px !important;
+            left: 12px !important;
+            max-width: none !important;
+          }
+          .hf-footer-offer-banner {
+            flex-direction: column !important;
+            padding: 1.5rem !important;
+          }
+          .hf-footer-bottom {
+            flex-direction: column !important;
+            gap: 12px !important;
+            align-items: flex-start !important;
+          }
+          .hf-footer-bottom-links {
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+          }
+        }
+
+        /* === FAQ === */
         .hf-faq-trigger:hover { background: rgba(255,255,255,0.03) !important; }
+        .hf-faq-track::-webkit-scrollbar { display: none; }
         [data-state="open"] .hf-faq-chevron { transform: rotate(180deg); }
+
+        /* === STACKED CARD MOBILE === */
+        @media (max-width: 560px) {
+          .hf-trainers-grid { grid-template-columns: 1fr !important; }
+          .hf-stacked-card-grid { padding: 1rem !important; }
+        }
 
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes offerPopupSlideIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
 

@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Award, Heart, Target, UserCheck, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import React, { useRef, useEffect } from "react";
+import { ShieldCheck, Trophy, UserCheck, Target } from "lucide-react";
 import { FounderData } from "../adminStore";
-import { LearnMoreModal, ModalContent } from "./LearnMoreModal";
 import defaultGirishAfter from "../../../public/transformations/girish_after.png";
 
 const LIME = "#D8FF3E";
@@ -15,22 +14,85 @@ const MF: React.CSSProperties = {
   fontFamily: '"JetBrains Mono", monospace',
 };
 
-const glass: React.CSSProperties = {
-  background: "rgba(255, 255, 255, 0.03)",
-  backdropFilter: "blur(16px)",
-  WebkitBackdropFilter: "blur(16px)",
-  border: "1px solid rgba(255, 255, 255, 0.07)",
-  borderRadius: 12,
+const BF: React.CSSProperties = {
+  fontFamily: '"DM Sans", sans-serif',
 };
 
 interface FounderStorySectionProps {
   founderData?: FounderData;
 }
 
-export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founderData }) => {
-  const [modalData, setModalData] = useState<ModalContent | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+// Decorative curvy SVG background lines (inspired by landonorris.com)
+const CurvyBackgroundLines: React.FC = () => (
+  <svg
+    viewBox="0 0 1440 900"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{
+      position: "absolute",
+      inset: 0,
+      width: "100%",
+      height: "100%",
+      pointerEvents: "none",
+      zIndex: 0,
+      opacity: 0.045,
+    }}
+    preserveAspectRatio="none"
+  >
+    {/* Primary flowing curves */}
+    <path
+      d="M-100 200 C200 100, 400 350, 720 280 S1100 180, 1540 320"
+      stroke="white"
+      strokeWidth="1.2"
+      fill="none"
+    />
+    <path
+      d="M-80 320 C180 220, 380 480, 700 400 S1080 290, 1540 450"
+      stroke="white"
+      strokeWidth="0.8"
+      fill="none"
+    />
+    <path
+      d="M-120 480 C220 380, 420 600, 740 520 S1120 420, 1560 580"
+      stroke="white"
+      strokeWidth="1.0"
+      fill="none"
+    />
+    <path
+      d="M-60 140 C260 60, 500 280, 780 200 S1140 100, 1560 240"
+      stroke="white"
+      strokeWidth="0.6"
+      fill="none"
+    />
+    <path
+      d="M-140 600 C160 500, 360 720, 680 640 S1060 540, 1520 700"
+      stroke="white"
+      strokeWidth="0.9"
+      fill="none"
+    />
+    <path
+      d="M-90 720 C200 620, 400 840, 720 760 S1100 660, 1560 820"
+      stroke="white"
+      strokeWidth="0.7"
+      fill="none"
+    />
+    {/* Secondary subtle waves */}
+    <path
+      d="M-50 50 C300 -20, 550 200, 820 120 S1180 30, 1560 160"
+      stroke="white"
+      strokeWidth="0.5"
+      fill="none"
+    />
+    <path
+      d="M-100 850 C200 750, 450 900, 750 830 S1100 740, 1560 870"
+      stroke="white"
+      strokeWidth="0.5"
+      fill="none"
+    />
+  </svg>
+);
 
+export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founderData }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -40,10 +102,10 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founde
     founderData?.videoUrl ||
     "https://assets.mixkit.co/videos/preview/mixkit-man-doing-exercises-with-dumbbells-in-a-gym-42617-large.mp4";
 
-  const displayAuthor = founderData?.quoteAuthor || "COACH GIRISH";
-  const displaySubtext = founderData?.quoteSubtext || "19+ YEARS OF EXPERIENCE & DEDICATION";
+  const displayAuthor = "Mr. Girish Apurkar";
+  const displaySubtext = "19+ YEARS OF REAL ATHLETIC EXPERIENCE — FOUNDER & HEAD COACH";
 
-  // IntersectionObserver to auto-play video on scroll when entering view
+  // Auto-play video on scroll
   useEffect(() => {
     if (displayMediaType !== "video") return;
 
@@ -69,300 +131,222 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founde
     return () => observer.disconnect();
   }, [displayMediaType, displayVideoUrl]);
 
+  // Sales principles — sentences only, no tags
+  const principles = [
+    {
+      icon: <ShieldCheck size={26} color={LIME} />,
+      text: "100% PERSONAL GUIDANCE & FORM CORRECTION ON EVERY LIFT",
+    },
+    {
+      icon: <Trophy size={26} color={LIME} />,
+      text: "NO STARVATION DIETS — PRACTICAL REAL-FOOD RESULTS",
+    },
+    {
+      icon: <UserCheck size={26} color={LIME} />,
+      text: "ZERO INTIMIDATION — A WELCOMING PLACE BUILT FOR EVERYDAY PEOPLE",
+    },
+    {
+      icon: <Target size={26} color={LIME} />,
+      text: "DIRECT ACCESS TO A 19+ YRS ATHLETE & CERTIFIED CHAMPION COACH",
+    },
+  ];
+
   return (
-    <>
-      <section
-        id="founder-story"
-        aria-label="Meet Your Head Coach section"
+    <section
+      id="head-coach"
+      aria-label="Head Coach Section — Mr. Girish Apurkar"
+      style={{
+        padding: "5rem 2rem",
+        background: "#080808",
+        position: "relative",
+        overflow: "hidden",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {/* Curvy background decorative lines (only this section) */}
+      <CurvyBackgroundLines />
+
+      {/* Ambient background glow */}
+      <div
         style={{
-          padding: "6rem 2rem",
-          background: "#080808",
-          position: "relative",
-          overflow: "hidden",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          position: "absolute",
+          inset: 0,
+          background:
+            "radial-gradient(ellipse at 80% 30%, rgba(216,255,62,0.04) 0%, transparent 60%)",
+          pointerEvents: "none",
         }}
-      >
-        {/* Ambient background glow */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "radial-gradient(ellipse at 80% 30%, rgba(216,255,62,0.04) 0%, transparent 60%)",
-            pointerEvents: "none",
-          }}
-        />
+      />
 
-        <div style={{ maxWidth: 1360, margin: "0 auto" }}>
-          {/* Section Header */}
-          <div style={{ marginBottom: "2.5rem" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 14px",
-                background: "rgba(216,255,62,0.08)",
-                border: "1px solid rgba(216,255,62,0.22)",
-                borderRadius: 20,
-                ...MF,
-                fontSize: 10,
-                color: LIME,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                marginBottom: "1rem",
-              }}
-            >
-              <Award size={13} /> MEET YOUR HEAD COACH
-            </div>
-
-            <h2
-              style={{
-                ...DF,
-                fontSize: "clamp(2.2rem, 5vw, 4.2rem)",
-                lineHeight: 0.95,
-                textTransform: "uppercase",
-                color: "#FFFFFF",
-                margin: "0 0 0.75rem",
-              }}
-            >
-              BUILD A STRONGER BODY WITH <br />
-              <span style={{ color: LIME }}>THE RIGHT GUIDANCE</span>
-            </h2>
-            <p style={{ color: "#A1A1AA", fontSize: "15px", maxWidth: 600, lineHeight: 1.6, margin: 0 }}>
-              Coach Girish started Hercules Fitness out of real passion. You don&apos;t need to be fit before you join.
-            </p>
-          </div>
-
-          {/* Founder Bio Grid */}
-          <div
+      <div style={{ maxWidth: 1360, margin: "0 auto", position: "relative", zIndex: 2 }}>
+        {/* Section Header */}
+        <div style={{ marginBottom: "3rem" }}>
+          <h2
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "2.5rem",
-              alignItems: "center",
-              marginBottom: "4rem",
+              ...DF,
+              fontSize: "clamp(2.5rem, 5.5vw, 4.8rem)",
+              lineHeight: 0.95,
+              textTransform: "uppercase",
+              color: "#FFFFFF",
+              margin: 0,
+              letterSpacing: "-0.01em",
             }}
           >
-            {/* 9:16 Vertical Portrait Media Container (Photo or Video) */}
-            <div ref={containerRef} style={{ position: "relative", width: "100%", maxWidth: 360, margin: "0 auto" }}>
-              <div
-                style={{
-                  position: "relative",
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  border: "1px solid rgba(216,255,62,0.35)",
-                  background: "#08080C",
-                  boxShadow: "0 20px 50px rgba(0,0,0,0.9), 0 0 35px rgba(216,255,62,0.12)",
-                  aspectRatio: "9 / 16",
-                  width: "100%",
-                  maxHeight: 580,
-                }}
-              >
-                {displayMediaType === "video" && displayVideoUrl ? (
-                  <video
-                    ref={videoRef}
-                    src={displayVideoUrl}
-                    playsInline
-                    loop
-                    muted
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={displayImage}
-                    alt={`${displayAuthor} — Founder & Head Coach`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      objectPosition: "top center",
-                      display: "block",
-                    }}
-                  />
-                )}
+            YOU DON&apos;T NEED TO BE FIT <br />
+            <span style={{ color: LIME }}>BEFORE YOU JOIN</span>
+          </h2>
+        </div>
 
-                <div
+        {/* Founder Bio & Sales Principles Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "3rem",
+            alignItems: "center",
+          }}
+        >
+          {/* LARGER 9:16 Vertical Portrait Media Container */}
+          <div
+            ref={containerRef}
+            style={{ position: "relative", width: "100%", maxWidth: 460, margin: "0 auto" }}
+          >
+            <div
+              style={{
+                position: "relative",
+                borderRadius: 24,
+                overflow: "hidden",
+                border: "2px solid rgba(216,255,62,0.4)",
+                background: "#08080C",
+                boxShadow: "0 20px 50px rgba(0,0,0,0.9), 0 0 35px rgba(216,255,62,0.15)",
+                aspectRatio: "9 / 16",
+                width: "100%",
+                maxHeight: 720,
+              }}
+            >
+              {displayMediaType === "video" && displayVideoUrl ? (
+                <video
+                  ref={videoRef}
+                  src={displayVideoUrl}
+                  playsInline
+                  loop
+                  muted
                   style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "linear-gradient(180deg, transparent 40%, rgba(8,8,10,0.95) 100%)",
-                    pointerEvents: "none",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
                   }}
                 />
+              ) : (
+                <img
+                  src={displayImage}
+                  alt={`${displayAuthor} — Founder & Head Coach`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "top center",
+                    display: "block",
+                  }}
+                />
+              )}
 
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, transparent 40%, rgba(8,8,10,0.95) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Name Overlay */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 20,
+                  left: 18,
+                  right: 18,
+                  background: "rgba(12, 12, 16, 0.85)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(216,255,62,0.3)",
+                  borderRadius: 16,
+                  padding: "16px 20px",
+                  zIndex: 10,
+                }}
+              >
+                <div style={{ ...DF, fontSize: 26, color: "#FFFFFF", letterSpacing: "0.02em" }}>
+                  {displayAuthor}
+                </div>
                 <div
                   style={{
-                    position: "absolute",
-                    bottom: 18,
-                    left: 16,
-                    right: 16,
-                    ...glass,
-                    padding: "14px 16px",
-                    background: "rgba(12, 12, 16, 0.88)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    zIndex: 10,
+                    ...MF,
+                    fontSize: 9.5,
+                    color: LIME,
+                    letterSpacing: "0.15em",
+                    marginTop: 4,
+                    fontWeight: 700,
                   }}
                 >
-                  <div>
-                    <div style={{ ...DF, fontSize: 22, color: "#FFFFFF" }}>{displayAuthor}</div>
-                    <div style={{ ...MF, fontSize: 8.5, color: LIME, letterSpacing: "0.15em", marginTop: 2 }}>
-                      {displaySubtext}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setModalData({
-                        badge: "HEAD COACH PROFILE",
-                        title: "MEET COACH GIRISH",
-                        subtitle: "19+ YEARS LIFTING & ATHLETE MENTORSHIP",
-                        fullDescription:
-                          "Coach Girish is a 19-year heavyweight champion who built Hercules Fitness to create a real training sanctuary in Bidar/Kalaburagi.\n\nUnlike commercial gym owners focused purely on sales, Coach Girish spends every day on the gym floor correcting members' posture, teaching compound lifting safety, and guiding individuals step-by-step toward lifelong strength.",
-                        keyPoints: [
-                          "19+ Years of competitive lifting & practical coaching",
-                          "Personal form correction on every major lift (Squats, Deadlifts, Presses)",
-                          "Simple, practical nutrition plans tailored to everyday lifestyle",
-                          "Encouraging environment where beginners feel supported",
-                        ],
-                      })
-                    }
-                    style={{
-                      ...MF,
-                      fontSize: 10,
-                      color: LIME,
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontWeight: 700,
-                    }}
-                  >
-                    Learn More <ChevronRight size={12} />
-                  </button>
+                  {displaySubtext}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Story Points with Apple-Style Learn More Buttons */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {[
-                {
-                  icon: <UserCheck size={18} color={LIME} />,
-                  title: "Personal Guidance For Everyone",
-                  shortDesc: "Step-by-step guidance on how to perform every exercise safely without injury.",
-                  modal: {
-                    badge: "FOUNDER METHOD",
-                    title: "Personal Guidance For Everyone",
-                    subtitle: "Zero Intimidation • Beginners Welcome",
-                    fullDescription:
-                      "Whether it's your very first day in a gym or you're returning after years, Coach Girish ensures you never feel lost.\n\nFrom learning how to grip a barbell correctly to finding your comfortable squat depth, every exercise is broken down into simple, manageable steps so you build confidence fast.",
-                    keyPoints: [
-                      "Hands-on posture & form checks during your workout",
-                      "Weight progression customized to your current strength level",
-                      "Injury prevention techniques for lower back, knees, and shoulders",
-                    ],
-                  },
-                },
-                {
-                  icon: <Target size={18} color={LIME} />,
-                  title: "Simple Fitness That Works",
-                  shortDesc: "No confusing diet trends. Just simple exercise plans and clear daily habits.",
-                  modal: {
-                    badge: "NO-GIMMICK FITNESS",
-                    title: "Simple Fitness That Works",
-                    subtitle: "Real Science • Sustainable Habits",
-                    fullDescription:
-                      "Most fitness programs fail because they ask everyday people to follow extreme, unsustainable diets.\n\nAt Hercules Fitness, we focus on simple home meals, protein awareness, and progressive workouts that fit naturally into your busy work or study routine.",
-                    keyPoints: [
-                      "No expensive supplements or starvation diets required",
-                      "Balanced protein & meal guidance using everyday food",
-                      "Workouts designed for 45-60 minutes maximum efficiency",
-                    ],
-                  },
-                },
-                {
-                  icon: <Heart size={18} color={LIME} />,
-                  title: "A Welcoming Place To Grow",
-                  shortDesc: "A respectful, family-like environment where everyone focuses on daily self-improvement.",
-                  modal: {
-                    badge: "COMMUNITY CULTURE",
-                    title: "A Welcoming Place To Grow",
-                    subtitle: "Supportive • Respectful • Focused",
-                    fullDescription:
-                      "Hercules Fitness is built on mutual respect. Whether you're lifting 5kg or 150kg, every member is supported by coaches and peers alike.\n\nWe maintain clean platforms, high safety standards, and a warm atmosphere where anyone—college students, working women, or seniors—feels right at home.",
-                    keyPoints: [
-                      "Respectful environment for women and beginners",
-                      "Clean equipment and organized platforms",
-                      "Friendly atmosphere with supportive gym members",
-                    ],
-                  },
-                },
-              ].map(({ icon, title, shortDesc, modal }, idx) => (
+          {/* Sales Principles — sentences only, no tags */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.75rem",
+              paddingLeft: "0.5rem",
+            }}
+          >
+            {principles.map(({ icon, text }, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "6px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 <div
-                  key={idx}
                   style={{
-                    ...glass,
-                    padding: "16px 20px",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 50,
+                    background: "rgba(216,255,62,0.1)",
+                    border: "1px solid rgba(216,255,62,0.3)",
                     display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {icon}
-                    <h4 style={{ color: "#FFF", fontSize: 15, fontWeight: 700, margin: 0 }}>
-                      {title}
-                    </h4>
-                  </div>
-                  <p style={{ color: "#A1A1AA", fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-                    {shortDesc}
-                  </p>
-                  <div>
-                    <button
-                      onClick={() => setModalData(modal)}
-                      style={{
-                        ...MF,
-                        fontSize: 11,
-                        color: LIME,
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 0,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontWeight: 700,
-                        marginTop: 4,
-                      }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.textDecoration = "underline")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.textDecoration = "none")}
-                    >
-                      Learn More <ChevronRight size={13} />
-                    </button>
-                  </div>
+                  {icon}
                 </div>
-              ))}
-            </div>
+
+                <div
+                  style={{
+                    ...DF,
+                    fontSize: "clamp(1.2rem, 2.2vw, 1.8rem)",
+                    color: "#FFFFFF",
+                    letterSpacing: "0.03em",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {text}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
-
-      {/* Learn More Modal */}
-      <LearnMoreModal
-        isOpen={!!modalData}
-        onClose={() => setModalData(null)}
-        content={modalData}
-      />
-    </>
+      </div>
+    </section>
   );
 };

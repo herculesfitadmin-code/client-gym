@@ -456,36 +456,15 @@ export const ProgramStackedCardsSection: React.FC = () => {
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
             marginBottom: "3rem",
-            flexWrap: "wrap",
             gap: "1.5rem",
           }}
         >
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: "0.5rem",
-              }}
-            >
-              <div style={{ width: 28, height: 2, background: LIME }} />
-              <span
-                style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: LIME,
-                  letterSpacing: "0.25em",
-                  textTransform: "uppercase",
-                }}
-              >
-                ATHLETIC DISCIPLINES
-              </span>
-            </div>
             <h2
               style={{
                 fontFamily: '"Big Shoulders Display", Impact, sans-serif',
@@ -495,6 +474,7 @@ export const ProgramStackedCardsSection: React.FC = () => {
                 lineHeight: 0.92,
                 color: "#FFFFFF",
                 letterSpacing: "0.02em",
+                textAlign: "center",
               }}
             >
               TRAIN WITH

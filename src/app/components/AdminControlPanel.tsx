@@ -1,3979 +1,1658 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   AdminSiteData,
-  SiteTagline,
-  SiteOffer,
   PricingPlan,
   AdminUser,
   FounderData,
   BlogPost,
-  LegalPolicies,
   EnquiryLead,
   defaultSiteData,
+  fetchCloudSiteData,
+  pushToCloud,
+  DEFAULT_CLOUD_DB_URL,
 } from "../adminStore";
+import {
+  FirebaseConfig,
+  loadFirebaseConfig,
+  saveFirebaseConfig,
+  fetchFirebaseSiteData,
+  pushToFirebase,
+} from "../firebaseConfig";
+import { uploadMediaFileToFirebase } from "../../lib/firebase";
 import { CoachItem } from "./CoachesStackedCards";
 import { HerculesLogo } from "./HerculesLogo";
 import {
-  Save,
-  LogOut,
-  Type,
-  Tag,
-  DollarSign,
-  Users,
-  Plus,
-  Trash2,
-  Edit3,
-  Check,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  UserPlus,
-  UserX,
-  KeyRound,
-  ExternalLink,
-  ChevronRight,
-  Sparkles,
-  Info,
-  Sliders,
-  UploadCloud,
-  Upload,
-  Award,
-  Image,
-  AlertTriangle,
-  BookOpen,
-  Scale,
-  FileText,
-  FileSpreadsheet,
-  Copy,
-  Download,
-  Send,
-  Database,
+  LogOut, Plus, Trash2, Edit3, Check, Eye, EyeOff,
+  ShieldCheck, UserPlus, UserX, ChevronRight, Sparkles,
+  UploadCloud, BookOpen, Scale, FileText, Copy,
+  Download, Send, Database, Home, DollarSign, Users,
+  Image, Bell, Phone, Settings, BarChart2, X, Menu,
+  Save, ArrowLeft, RefreshCw, AlertTriangle, Star,
+  MessageSquare, Tag, Zap, Globe, Lock, Shield, KeyRound,
 } from "lucide-react";
 
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const ACCENT = "#D8FF3E";
+const BG = "#0A0A0B";
+const SURFACE = "#111113";
+const SURFACE2 = "#18181C";
+const BORDER = "rgba(255,255,255,0.07)";
+const TEXT = "#FFFFFF";
+const MUTED = "#71717A";
+const MF: React.CSSProperties = { fontFamily: '"JetBrains Mono", monospace' };
+const DF: React.CSSProperties = { fontFamily: '"Big Shoulders Display", Impact, sans-serif', fontWeight: 900 };
+const SF: React.CSSProperties = { fontFamily: '"DM Sans", sans-serif' };
+
+// ─── TOAST SYSTEM ─────────────────────────────────────────────────────────────
+type ToastType = "success" | "error" | "info";
+interface Toast { id: number; message: string; type: ToastType; }
+
+function useToast() {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const show = useCallback((message: string, type: ToastType = "success") => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, message, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+  }, []);
+  return { toasts, show };
+}
+
+function ToastContainer({ toasts }: { toasts: Toast[] }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 24,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 999999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        alignItems: "center",
+        pointerEvents: "none",
+      }}
+    >
+      {toasts.map((t) => {
+        const isSuccess = t.type === "success";
+        const isError = t.type === "error";
+        const accentColor = isSuccess ? "#D8FF3E" : isError ? "#FF3E3E" : "#3EFFD8";
+
+        return (
+          <div
+            key={t.id}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              background: "rgba(16, 16, 20, 0.92)",
+              backdropFilter: "blur(24px) saturate(180%)",
+              WebkitBackdropFilter: "blur(24px) saturate(180%)",
+              border: `1px solid ${isError ? "rgba(255,62,62,0.4)" : "rgba(255,255,255,0.14)"}`,
+              borderRadius: 50,
+              padding: "10px 22px",
+              boxShadow: isSuccess
+                ? "0 20px 50px rgba(0,0,0,0.8), 0 0 25px rgba(216,255,62,0.2)"
+                : isError
+                ? "0 20px 50px rgba(0,0,0,0.8), 0 0 25px rgba(255,62,62,0.2)"
+                : "0 20px 50px rgba(0,0,0,0.8)",
+              animation: "applePillIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: accentColor,
+                boxShadow: `0 0 10px ${accentColor}`,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                ...MF,
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "#FFFFFF",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              {t.message}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── SHARED UI COMPONENTS ─────────────────────────────────────────────────────
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ ...MF, fontSize: 10, color: MUTED, letterSpacing: "0.18em" }}>{label}</label>
+      {children}
+      {hint && <span style={{ ...SF, fontSize: 11, color: MUTED, opacity: 0.7 }}>{hint}</span>}
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, type = "text", multiline, rows }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; multiline?: boolean; rows?: number;
+}) {
+  const s: React.CSSProperties = {
+    background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT,
+    padding: "11px 14px", borderRadius: 8, ...SF, fontSize: 13, outline: "none",
+    width: "100%", boxSizing: "border-box", transition: "border-color 0.2s", resize: "vertical",
+  };
+  if (multiline) return (
+    <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      rows={rows || 4} style={s}
+      onFocus={e => (e.target as HTMLTextAreaElement).style.borderColor = `${ACCENT}60`}
+      onBlur={e => (e.target as HTMLTextAreaElement).style.borderColor = BORDER} />
+  );
+  return (
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      style={s}
+      onFocus={e => (e.target as HTMLInputElement).style.borderColor = `${ACCENT}60`}
+      onBlur={e => (e.target as HTMLInputElement).style.borderColor = BORDER} />
+  );
+}
+
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button onClick={() => onChange(!checked)} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+      <div style={{ width: 44, height: 24, borderRadius: 12, background: checked ? ACCENT : SURFACE2, border: `1px solid ${checked ? ACCENT : BORDER}`, position: "relative", transition: "all 0.2s", flexShrink: 0 }}>
+        <div style={{ position: "absolute", top: 2, left: checked ? 22 : 2, width: 18, height: 18, borderRadius: "50%", background: checked ? "#080808" : MUTED, transition: "left 0.2s" }} />
+      </div>
+      <span style={{ ...SF, fontSize: 13, color: checked ? TEXT : MUTED }}>{label}</span>
+    </button>
+  );
+}
+
+function Btn({ children, onClick, variant = "primary", small, disabled, danger }: {
+  children: React.ReactNode; onClick?: () => void; variant?: "primary" | "secondary" | "ghost";
+  small?: boolean; disabled?: boolean; danger?: boolean;
+}) {
+  const bg = danger ? "rgba(255,62,62,0.12)" : variant === "primary" ? ACCENT : variant === "secondary" ? SURFACE2 : "transparent";
+  const color = danger ? "#FF3E3E" : variant === "primary" ? "#080808" : TEXT;
+  const border = danger ? "1px solid rgba(255,62,62,0.3)" : variant === "secondary" ? `1px solid ${BORDER}` : "none";
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      background: bg, color, border, borderRadius: 8, cursor: disabled ? "not-allowed" : "pointer",
+      padding: small ? "7px 14px" : "11px 20px", ...SF, fontSize: small ? 12 : 13, fontWeight: 600,
+      display: "inline-flex", alignItems: "center", gap: 6, opacity: disabled ? 0.5 : 1,
+      transition: "all 0.2s", whiteSpace: "nowrap",
+    }}>
+      {children}
+    </button>
+  );
+}
+
+function MediaUploader({
+  value,
+  onChange,
+  type = "any",
+  label,
+  hint,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  type?: "image" | "video" | "any";
+  label?: string;
+  hint?: string;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const url = await uploadMediaFileToFirebase(file);
+      if (url) {
+        onChange(url);
+      }
+    } catch (err) {
+      console.error("Error uploading file to Firebase Storage:", err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const acceptTypes =
+    type === "video" ? "video/*" : type === "image" ? "image/*" : "image/*,video/*";
+
+  const isVideo =
+    type === "video" ||
+    (value && (value.startsWith("data:video") || value.endsWith(".mp4") || value.endsWith(".webm")));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {label && <label style={{ ...MF, fontSize: 10, color: MUTED, letterSpacing: "0.18em" }}>{label}</label>}
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept={acceptTypes}
+        style={{ display: "none" }}
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFile(e.target.files[0]);
+          }
+        }}
+      />
+
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        style={{
+          border: `2px dashed ${isDragging ? ACCENT : BORDER}`,
+          background: isDragging ? `${ACCENT}12` : SURFACE2,
+          borderRadius: 10,
+          padding: "16px",
+          textAlign: "center",
+          cursor: isUploading ? "wait" : "pointer",
+          transition: "all 0.2s ease",
+          position: "relative",
+        }}
+      >
+        {isUploading ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "12px 0" }}>
+            <RefreshCw size={24} color={ACCENT} style={{ animation: "spin 1s linear infinite" }} />
+            <span style={{ ...MF, fontSize: 11, color: ACCENT, letterSpacing: "0.15em" }}>
+              UPLOADING TO FIREBASE STORAGE...
+            </span>
+          </div>
+        ) : value ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            {isVideo ? (
+              <video src={value} controls style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 6 }} />
+            ) : (
+              <img src={value} alt="Preview" style={{ maxHeight: 140, maxWidth: "100%", borderRadius: 6, objectFit: "cover" }} />
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 14px", borderRadius: 6, ...SF, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                <UploadCloud size={13} /> Change File
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                style={{ background: "rgba(255,62,62,0.12)", border: "1px solid rgba(255,62,62,0.3)", color: "#FF3E3E", padding: "6px 14px", borderRadius: 6, ...SF, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                <Trash2 size={13} /> Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "12px 0" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${ACCENT}15`, border: `1px solid ${ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: ACCENT }}>
+              <UploadCloud size={20} />
+            </div>
+            <div>
+              <div style={{ ...SF, fontSize: 13, fontWeight: 600, color: TEXT }}>
+                Drag & drop {type === "video" ? "video" : type === "image" ? "image" : "media file"} here
+              </div>
+              <div style={{ ...SF, fontSize: 11, color: MUTED, marginTop: 2 }}>
+                or click to browse files on your device
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+        {hint && <span style={{ ...SF, fontSize: 11, color: MUTED, opacity: 0.7 }}>{hint}</span>}
+        <button
+          type="button"
+          onClick={() => setShowUrlInput(s => !s)}
+          style={{ background: "none", border: "none", color: ACCENT, ...SF, fontSize: 11, cursor: "pointer", textDecoration: "underline", marginLeft: "auto" }}
+        >
+          {showUrlInput ? "Hide URL input" : "Or paste URL manually"}
+        </button>
+      </div>
+
+      {showUrlInput && (
+        <div style={{ marginTop: 6 }}>
+          <Input value={value} onChange={onChange} placeholder="https://... or /filename.mp4" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <h2 style={{ ...DF, fontSize: 26, letterSpacing: "0.04em", margin: 0, color: TEXT }}>{title}</h2>
+      {subtitle && <p style={{ ...SF, fontSize: 14, color: MUTED, margin: "6px 0 0" }}>{subtitle}</p>}
+    </div>
+  );
+}
+
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "20px 24px", ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color?: string }) {
+  return (
+    <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color || ACCENT}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+      <div>
+        <div style={{ ...DF, fontSize: 22, color: color || ACCENT, lineHeight: 1 }}>{value}</div>
+        <div style={{ ...MF, fontSize: 9, color: MUTED, letterSpacing: "0.15em", marginTop: 4 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NAV ITEM DEFINITION ─────────────────────────────────────────────────────
+type PageId = "dashboard" | "homepage" | "pricing" | "coaches" | "media" | "offers" | "blog" | "contact" | "admins" | "enquiries" | "developer";
+interface NavItem { id: PageId; label: string; icon: React.ReactNode; dev?: boolean; }
+
+const NAV_ITEMS: NavItem[] = [
+  { id: "dashboard",  label: "Dashboard",       icon: <BarChart2 size={16} /> },
+  { id: "homepage",   label: "Homepage",         icon: <Home size={16} /> },
+  { id: "pricing",    label: "Pricing & Plans",  icon: <DollarSign size={16} /> },
+  { id: "coaches",    label: "Coaches",          icon: <Users size={16} /> },
+  { id: "media",      label: "Media & Gallery",  icon: <Image size={16} /> },
+  { id: "offers",     label: "Offers & Deals",   icon: <Tag size={16} /> },
+  { id: "blog",       label: "Articles & Blog",  icon: <BookOpen size={16} /> },
+  { id: "contact",    label: "Contact Info",     icon: <Phone size={16} /> },
+  { id: "admins",     label: "Admins",           icon: <Shield size={16} /> },
+  { id: "enquiries",  label: "Enquiries CRM",    icon: <MessageSquare size={16} /> },
+  { id: "developer",  label: "Developer",        icon: <Settings size={16} />, dev: true },
+];
+
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 interface AdminControlPanelProps {
   isOpen: boolean;
   onClose: () => void;
   siteData: AdminSiteData;
-  onSaveData: (data: AdminSiteData) => void;
+  onSaveData: (data: AdminSiteData) => Promise<{ success: boolean; error?: string }> | void;
   onResetData: () => void;
   onLogout: () => void;
   currentUserEmail?: string;
 }
 
-const ACCENT = "#D8FF3E";
-
 export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
-  isOpen,
-  onClose,
-  siteData,
-  onSaveData,
-  onResetData,
-  onLogout,
-  currentUserEmail = "abcd@gmail.com",
+  isOpen, onClose, siteData, onSaveData, onResetData, onLogout, currentUserEmail = "admin@gym.com",
 }) => {
-  // Local draft state for editing before saving
-  const [taglineDraft, setTaglineDraft] = useState<SiteTagline>(siteData.tagline);
-  const [offerDraft, setOfferDraft] = useState<SiteOffer>(siteData.offer);
-  const [plansDraft, setPlansDraft] = useState<PricingPlan[]>(siteData.plans);
-  const [coachesDraft, setCoachesDraft] = useState<CoachItem[]>(siteData.coaches);
-  const [adminsDraft, setAdminsDraft] = useState<AdminUser[]>(siteData.admins || []);
-  const [founderDraft, setFounderDraft] = useState<FounderData>(siteData.founder || defaultSiteData.founder);
-  const [blogsDraft, setBlogsDraft] = useState<BlogPost[]>(siteData.blogs || defaultSiteData.blogs);
-  const [policiesDraft, setPoliciesDraft] = useState<LegalPolicies>(
-    siteData.policies || defaultSiteData.policies
-  );
-  const [activePolicyTab, setActivePolicyTab] = useState<"privacy" | "terms" | "refunds">("privacy");
-  const [webhookUrlDraft, setWebhookUrlDraft] = useState(siteData.googleSheetWebhookUrl || "");
-  const [enquiriesDraft, setEnquiriesDraft] = useState<EnquiryLead[]>(siteData.enquiries || []);
-  const [copyCodeToast, setCopyCodeToast] = useState(false);
-  const [testWebhookStatus, setTestWebhookStatus] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [draft, setDraft] = useState<AdminSiteData>(siteData);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { toasts, show: showToast } = useToast();
 
-  // Section navigation state
-  const [activeSection, setActiveSection] = useState<
-    "all" | "enquiries" | "tagline" | "founder" | "offers" | "prices" | "coaches" | "blogs" | "policies" | "admins"
-  >("all");
+  const updateDraft = useCallback(<K extends keyof AdminSiteData>(key: K, value: AdminSiteData[K]) => {
+    setDraft(d => ({ ...d, [key]: value }));
+  }, []);
 
-  // Blog article form state
-  const [isAddingBlog, setIsAddingBlog] = useState(false);
-  const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
-  const [blogForm, setBlogForm] = useState<BlogPost>({
-    id: "",
-    title: "",
-    subtitle: "",
-    category: "GUIDE",
-    author: "Coach Girish",
-    date: "August 2024",
-    content: "",
-  });
-
-  // Coach modal/inline form state
-  const [isAddingCoach, setIsAddingCoach] = useState(false);
-  const [editingCoachId, setEditingCoachId] = useState<string | null>(null);
-  const [saveToast, setSaveToast] = useState(false);
-
-  // Admin user form state
-  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
-  const [newAdminForm, setNewAdminForm] = useState({
-    email: "",
-    password: "",
-    role: "Co-Owner / Manager",
-  });
-  const [showAdminPass, setShowAdminPass] = useState<Record<string, boolean>>({});
-
-  // Custom Confirmation / Alert Modal State
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    confirmText: string;
-    cancelText?: string;
-    isDanger?: boolean;
-    onConfirm: () => void;
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    isDanger: true,
-    onConfirm: () => {},
-  });
-
-  // Coach form inputs
-  const [coachForm, setCoachForm] = useState<{
-    title: string;
-    subtitle: string;
-    meta: string;
-    desc: string;
-    tags: string;
-    image: string;
-  }>({
-    title: "",
-    subtitle: "",
-    meta: "",
-    desc: "",
-    tags: "",
-    image: "",
-  });
-
-  // Section refs for smooth navigation scrolling
-  const enquiriesRef = useRef<HTMLDivElement>(null);
-  const taglineRef = useRef<HTMLDivElement>(null);
-  const founderRef = useRef<HTMLDivElement>(null);
-  const offersRef = useRef<HTMLDivElement>(null);
-  const pricesRef = useRef<HTMLDivElement>(null);
-  const coachesRef = useRef<HTMLDivElement>(null);
-  const blogsRef = useRef<HTMLDivElement>(null);
-  const policiesRef = useRef<HTMLDivElement>(null);
-  const adminsRef = useRef<HTMLDivElement>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const heroVideoFileInputRef = useRef<HTMLInputElement>(null);
-  const founderFileInputRef = useRef<HTMLInputElement>(null);
-  const founderVideoFileInputRef = useRef<HTMLInputElement>(null);
-  const beforeFileInputRef = useRef<HTMLInputElement>(null);
-  const afterFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [isHeroDragActive, setIsHeroDragActive] = useState(false);
-  const [isFounderDragActive, setIsFounderDragActive] = useState(false);
-  const [isBeforeDragActive, setIsBeforeDragActive] = useState(false);
-  const [isAfterDragActive, setIsAfterDragActive] = useState(false);
-  const [transSliderPos, setTransSliderPos] = useState(50);
-
-  const handleHeroVideoFile = (file: File) => {
-    if (!file.type.startsWith("video/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid File Type",
-        message: "Please drag or upload a valid video file (MP4, WEBM, MOV).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setTaglineDraft((prev) => ({ ...prev, heroVideoUrl: e.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleImageFile = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid File Type",
-        message: "Please drag or upload a valid image file (PNG, JPG, WEBP, or GIF).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setCoachForm((prev) => ({ ...prev, image: e.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleFounderImageFile = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid File Type",
-        message: "Please drag or upload a valid image file (PNG, JPG, WEBP, or GIF).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setFounderDraft((prev) => ({ ...prev, image: e.target!.result as string, mediaType: "image" }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleFounderVideoFile = (file: File) => {
-    if (!file.type.startsWith("video/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid Video File",
-        message: "Please drag or upload a valid video file (MP4, WEBM, MOV).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setFounderDraft((prev) => ({ ...prev, videoUrl: url, mediaType: "video" }));
-  };
-
-  const handleBeforeImageFile = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid File Type",
-        message: "Please drag or upload a valid image file (PNG, JPG, WEBP, or GIF).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setFounderDraft((prev) => ({ ...prev, beforeImage: e.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleAfterImageFile = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Invalid File Type",
-        message: "Please drag or upload a valid image file (PNG, JPG, WEBP, or GIF).",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setFounderDraft((prev) => ({ ...prev, afterImage: e.target!.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Prevent background smooth scroll interference (Lenis) when Admin is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
+  const save = useCallback(async () => {
+    showToast("SAVING TO FIRESTORE...", "info");
+    const res = await onSaveData(draft);
+    if (res && res.success) {
+      showToast("FIRESTORE SYNCED", "success");
+    } else if (res && !res.success) {
+      showToast(
+        res.error && res.error.includes("permissions")
+          ? "PERMISSION DENIED — PUBLISH FIRESTORE RULES"
+          : `FIRESTORE ERROR — ${res.error || "SAVE FAILED"}`,
+        "error"
+      );
     } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
+      showToast("CHANGES SAVED LOCALLY", "info");
     }
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  const scrollToSection = (
-    ref: React.RefObject<HTMLDivElement>,
-    sectionName: "all" | "enquiries" | "tagline" | "founder" | "offers" | "prices" | "coaches" | "blogs" | "policies" | "admins"
-  ) => {
-    setActiveSection(sectionName);
-    const container = document.querySelector('[data-admin-scroll="true"]');
-    if (container) {
-      container.scrollTop = 0;
-    }
-    window.scrollTo({ top: 0, behavior: "instant" });
-  };
-
-  // Sync draft when siteData changes or panel opens
-  useEffect(() => {
-    if (isOpen) {
-      setTaglineDraft(siteData.tagline);
-      setOfferDraft(siteData.offer);
-      setPlansDraft(siteData.plans);
-      setCoachesDraft(siteData.coaches);
-      setAdminsDraft(siteData.admins || []);
-      setFounderDraft(siteData.founder || defaultSiteData.founder);
-      setBlogsDraft(siteData.blogs || defaultSiteData.blogs);
-      setPoliciesDraft(siteData.policies || defaultSiteData.policies);
-      setWebhookUrlDraft(siteData.googleSheetWebhookUrl || "");
-      setEnquiriesDraft(siteData.enquiries || []);
-    }
-  }, [isOpen, siteData]);
+  }, [draft, onSaveData, showToast]);
 
   if (!isOpen) return null;
 
-  // Check if any changes have been made in the draft compared to active siteData
-  const isDirty =
-    JSON.stringify(taglineDraft) !== JSON.stringify(siteData.tagline) ||
-    JSON.stringify(offerDraft) !== JSON.stringify(siteData.offer) ||
-    JSON.stringify(plansDraft) !== JSON.stringify(siteData.plans) ||
-    JSON.stringify(coachesDraft) !== JSON.stringify(siteData.coaches) ||
-    JSON.stringify(adminsDraft) !== JSON.stringify(siteData.admins || []) ||
-    JSON.stringify(founderDraft) !== JSON.stringify(siteData.founder || defaultSiteData.founder) ||
-    JSON.stringify(blogsDraft) !== JSON.stringify(siteData.blogs || defaultSiteData.blogs) ||
-    JSON.stringify(policiesDraft) !== JSON.stringify(siteData.policies || defaultSiteData.policies) ||
-    webhookUrlDraft !== (siteData.googleSheetWebhookUrl || "") ||
-    JSON.stringify(enquiriesDraft) !== JSON.stringify(siteData.enquiries || []);
-
-  const handleSaveAll = () => {
-    if (!isDirty) return;
-    const updated: AdminSiteData = {
-      tagline: taglineDraft,
-      offer: offerDraft,
-      plans: plansDraft,
-      coaches: coachesDraft,
-      admins: adminsDraft,
-      founder: founderDraft,
-      blogs: blogsDraft,
-      policies: policiesDraft,
-      googleSheetWebhookUrl: webhookUrlDraft,
-      enquiries: enquiriesDraft,
-    };
-    onSaveData(updated);
-    setSaveToast(true);
-    setTimeout(() => setSaveToast(false), 3000);
-  };
-
-  // Plan editing handlers
-  const handleUpdatePlanPrice = (id: string, price: number) => {
-    setPlansDraft((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, price: isNaN(price) ? 0 : price } : p))
-    );
-  };
-
-  const handleUpdatePlanOfferPrice = (id: string, offerPrice: number) => {
-    setPlansDraft((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, offerPrice: isNaN(offerPrice) ? 0 : offerPrice } : p))
-    );
-  };
-
-  const handleUpdatePlanOfferTag = (id: string, offerTag: string) => {
-    setPlansDraft((prev) => prev.map((p) => (p.id === id ? { ...p, offerTag } : p)));
-  };
-
-  const handleUpdatePlanOriginalPrice = (id: string, originalPrice: number) => {
-    setPlansDraft((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, originalPrice: isNaN(originalPrice) ? 0 : originalPrice } : p))
-    );
-  };
-
-  const handleUpdatePlanName = (id: string, name: string) => {
-    setPlansDraft((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
-  };
-
-  const handleUpdatePlanBadge = (id: string, badge: string) => {
-    setPlansDraft((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, badge: badge.trim() === "" ? null : badge } : p))
-    );
-  };
-
-  const handleUpdatePlanFeatures = (id: string, featuresStr: string) => {
-    const list = featuresStr.split("\n").filter((f) => f.trim() !== "");
-    setPlansDraft((prev) => prev.map((p) => (p.id === id ? { ...p, features: list } : p)));
-  };
-
-  // Coach handlers
-  const handleOpenAddCoach = () => {
-    setCoachForm({
-      title: "",
-      subtitle: "",
-      meta: "SENIOR COACH",
-      desc: "",
-      tags: "Strength, Conditioning, Bodybuilding",
-      image: "https://images.unsplash.com/photo-1567013127542-490d757e51fc?q=80&w=1200&auto=format&fit=crop",
-    });
-    setEditingCoachId(null);
-    setIsAddingCoach(true);
-  };
-
-  const handleOpenEditCoach = (coach: CoachItem) => {
-    setCoachForm({
-      title: coach.title,
-      subtitle: coach.subtitle,
-      meta: coach.meta,
-      desc: coach.desc,
-      tags: coach.tags.join(", "),
-      image: coach.image,
-    });
-    setEditingCoachId(coach.id);
-    setIsAddingCoach(true);
-  };
-
-  const handleSaveCoach = () => {
-    if (!coachForm.title.trim() || !coachForm.subtitle.trim()) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Required Fields Missing",
-        message: "Please fill out both the Coach Name and Specialty Subtitle fields.",
-        confirmText: "Got It",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
-    const tagArray = coachForm.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
-    if (editingCoachId) {
-      setCoachesDraft((prev) =>
-        prev.map((c) =>
-          c.id === editingCoachId
-            ? {
-                ...c,
-                title: coachForm.title.toUpperCase(),
-                subtitle: coachForm.subtitle,
-                meta: coachForm.meta.toUpperCase(),
-                desc: coachForm.desc,
-                tags: tagArray.length > 0 ? tagArray : ["Coaching", "Fitness"],
-                image: coachForm.image || "https://images.unsplash.com/photo-1567013127542-490d757e51fc",
-              }
-            : c
-        )
-      );
-    } else {
-      const newId = `coach-${Date.now()}`;
-      const count = coachesDraft.length + 1;
-      const cardNum = count < 10 ? `0${count}` : `${count}`;
-      const newCoach: CoachItem = {
-        id: newId,
-        cardNumber: cardNum,
-        totalCards: `${count}`,
-        title: coachForm.title.toUpperCase(),
-        subtitle: coachForm.subtitle,
-        meta: coachForm.meta.toUpperCase() || "NEW COACH",
-        desc: coachForm.desc || "Dedicated fitness coach leading transformation programs at Hercules FITNESS.",
-        tags: tagArray.length > 0 ? tagArray : ["Personal Training", "Fitness"],
-        image: coachForm.image || "https://images.unsplash.com/photo-1567013127542-490d757e51fc",
-      };
-      setCoachesDraft((prev) => [...prev, newCoach]);
-    }
-
-    setIsAddingCoach(false);
-    setEditingCoachId(null);
-  };
-
-  const handleDeleteCoach = (coachId: string, name: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Remove Trainer from Roster",
-      message: `Are you sure you want to remove coach "${name}" from active trainers? This will update your landing page immediately.`,
-      confirmText: "Remove Coach",
-      cancelText: "Cancel",
-      isDanger: true,
-      onConfirm: () => {
-        setCoachesDraft((prev) => prev.filter((c) => c.id !== coachId));
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-    });
-  };
-
-  // Admin user handlers
-  const handleCreateNewAdmin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = newAdminForm.email.trim().toLowerCase();
-    const cleanPassword = newAdminForm.password.trim();
-
-    if (!cleanEmail || !cleanPassword) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Missing Admin Credentials",
-        message: "Both Email ID and Password are required to register an Admin account.",
-        confirmText: "Understood",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
-    if (adminsDraft.some((a) => a.email.toLowerCase() === cleanEmail)) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Account Exists",
-        message: `An admin account with email "${cleanEmail}" is already registered.`,
-        confirmText: "Understood",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
-    const newAdmin: AdminUser = {
-      id: `admin-${Date.now()}`,
-      email: cleanEmail,
-      password: cleanPassword,
-      role: newAdminForm.role || "Co-Owner",
-      addedAt: new Date().toISOString().split("T")[0],
-    };
-
-    setAdminsDraft((prev) => [...prev, newAdmin]);
-    setNewAdminForm({ email: "", password: "", role: "Co-Owner / Manager" });
-    setIsAddingAdmin(false);
-  };
-
-  const handleDeleteAdmin = (adminId: string, email: string) => {
-    if (email.toLowerCase() === "abcd@gmail.com") {
-      setConfirmModal({
-        isOpen: true,
-        title: "Primary Owner Protected",
-        message: "The primary Super Admin owner account (abcd@gmail.com) cannot be deleted.",
-        confirmText: "Understood",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
-    setConfirmModal({
-      isOpen: true,
-      title: "Revoke Admin Access",
-      message: `Are you sure you want to revoke admin panel login access for "${email}"?`,
-      confirmText: "Revoke Access",
-      cancelText: "Cancel",
-      isDanger: true,
-      onConfirm: () => {
-        setAdminsDraft((prev) => prev.filter((a) => a.id !== adminId));
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-    });
-  };
-
-  // Blog handlers
-  const handleOpenEditBlog = (blog: BlogPost) => {
-    setEditingBlogId(blog.id);
-    setBlogForm(blog);
-    setIsAddingBlog(true);
-  };
-
-  const handleSaveBlogForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!blogForm.title.trim() || !blogForm.content.trim()) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Missing Required Fields",
-        message: "Please enter both a Title/Question and the complete Blog Content.",
-        confirmText: "Understood",
-        cancelText: "",
-        isDanger: false,
-        onConfirm: () => setConfirmModal((prev) => ({ ...prev, isOpen: false })),
-      });
-      return;
-    }
-
-    if (editingBlogId) {
-      setBlogsDraft((prev) =>
-        prev.map((b) => (b.id === editingBlogId ? { ...blogForm, id: editingBlogId } : b))
-      );
-    } else {
-      const newBlog: BlogPost = {
-        ...blogForm,
-        id: `blog-${Date.now()}`,
-      };
-      setBlogsDraft((prev) => [...prev, newBlog]);
-    }
-
-    setIsAddingBlog(false);
-    setEditingBlogId(null);
-    setBlogForm({
-      id: "",
-      title: "",
-      subtitle: "",
-      category: "GUIDE",
-      author: "Coach Girish",
-      date: "August 2024",
-      content: "",
-    });
-  };
-
-  const handleDeleteBlog = (id: string, title: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Delete Blog Article",
-      message: `Are you sure you want to delete "${title}"?`,
-      confirmText: "Delete Article",
-      cancelText: "Cancel",
-      isDanger: true,
-      onConfirm: () => {
-        setBlogsDraft((prev) => prev.filter((b) => b.id !== id));
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-    });
-  };
-
-  const toggleShowPass = (id: string) => {
-    setShowAdminPass((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
   return (
     <div
-      data-lenis-prevent="true"
-      data-admin-scroll="true"
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100vw",
-        height: "100vh",
-        zIndex: 999999,
-        background: "#09090b",
-        color: "#fafafa",
-        overflowY: "scroll",
-        overflowX: "hidden",
-        WebkitOverflowScrolling: "touch",
-        touchAction: "pan-y",
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-      }}
+      data-lenis-prevent
+      style={{ position: "fixed", inset: 0, zIndex: 99000, display: "flex", background: BG, height: "100dvh", overflow: "hidden" }}
     >
-      {/* ═══════════════════════════════════════ HEADER */}
-      <header
+      <ToastContainer toasts={toasts} />
+
+      {/* ═══ SIDEBAR ══════════════════════════════════════════════════════ */}
+      {/* Desktop sidebar always visible; mobile it's an overlay */}
+      <div
+        className={`hf-admin-sidebar ${sidebarOpen ? "open" : ""}`}
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 1000,
-          background: "rgba(18, 18, 20, 0.95)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          padding: "16px 32px",
+          width: 260,
+          flexShrink: 0,
+          background: SURFACE,
+          borderRight: `1px solid ${BORDER}`,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          position: "relative",
+          zIndex: 100000,
         }}
       >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Brand Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <HerculesLogo size={42} />
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h1
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                    margin: 0,
-                    color: "#ffffff",
-                  }}
-                >
-                  Hercules Control Panel
-                </h1>
-                <span
-                  style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    background: "rgba(216, 255, 62, 0.12)",
-                    color: ACCENT,
-                    padding: "2px 8px",
-                    borderRadius: 4,
-                    border: "1px solid rgba(216, 255, 62, 0.25)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Admin Mode
-                </span>
-              </div>
-              <p
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#a1a1aa",
-                  margin: "2px 0 0",
-                  fontWeight: 400,
-                }}
-              >
-                Logged in as <span style={{ color: "#f4f4f5", fontWeight: 500 }}>{currentUserEmail}</span>
-              </p>
-            </div>
+        {/* Logo */}
+        <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <HerculesLogo size={32} />
+          <div>
+            <div style={{ ...DF, fontSize: 14, letterSpacing: "0.1em" }}>HERCULES</div>
+            <div style={{ ...MF, fontSize: 7, color: MUTED, letterSpacing: "0.3em" }}>ADMIN PANEL</div>
           </div>
-
-          {/* Minimalist Navigation Pills */}
-          <nav
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: "#18181b",
-              padding: "4px",
-              borderRadius: 8,
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            {[
-              { id: "all", label: "Overview", icon: Sliders, ref: taglineRef },
-              { id: "enquiries", label: `Leads (${enquiriesDraft.length})`, icon: FileSpreadsheet, ref: enquiriesRef },
-              { id: "tagline", label: "Tagline", icon: Type, ref: taglineRef },
-              { id: "founder", label: "Founder Story", icon: Award, ref: founderRef },
-              { id: "offers", label: "Offers", icon: Tag, ref: offersRef },
-              { id: "prices", label: "Pricing", icon: DollarSign, ref: pricesRef },
-              { id: "coaches", label: `Coaches (${coachesDraft.length})`, icon: Users, ref: coachesRef },
-              { id: "blogs", label: `Blogs (${blogsDraft.length})`, icon: BookOpen, ref: blogsRef },
-              { id: "policies", label: "Policies", icon: Scale, ref: policiesRef },
-              { id: "admins", label: `Admins (${adminsDraft.length})`, icon: ShieldCheck, ref: adminsRef },
-            ].map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => scrollToSection(item.ref, item.id as any)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "8px 14px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: isActive ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                    color: isActive ? "#ffffff" : "#a1a1aa",
-                    fontSize: "0.8125rem",
-                    fontWeight: isActive ? 600 : 500,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <Icon size={14} style={{ color: isActive ? ACCENT : "#71717a" }} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Action Buttons */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              onClick={handleSaveAll}
-              disabled={!isDirty}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: isDirty ? ACCENT : "rgba(255, 255, 255, 0.08)",
-                color: isDirty ? "#09090b" : "#a1a1aa",
-                border: isDirty ? "none" : "1px solid rgba(255, 255, 255, 0.12)",
-                borderRadius: 6,
-                padding: "10px 18px",
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-                cursor: isDirty ? "pointer" : "not-allowed",
-                transition: "all 0.15s ease",
-                opacity: isDirty ? 1 : 0.7,
-                boxShadow: isDirty ? "0 2px 8px rgba(216, 255, 62, 0.2)" : "none",
-              }}
-            >
-              {isDirty ? <Save size={15} /> : <Check size={15} style={{ color: ACCENT }} />}
-              {isDirty ? "Save All Changes" : "All Changes Saved"}
-            </button>
-
-            <button
-              onClick={onClose}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255, 255, 255, 0.05)",
-                color: "#e4e4e7",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: 6,
-                padding: "10px 16px",
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)")}
-            >
-              <ExternalLink size={14} />
-              View Website
-            </button>
-
-            <button
-              onClick={onLogout}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(239, 68, 68, 0.08)",
-                color: "#f87171",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
-                borderRadius: 6,
-                padding: "10px 14px",
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <LogOut size={14} />
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Save Success Toast Banner */}
-      {saveToast && (
-        <div
-          style={{
-            position: "sticky",
-            top: 75,
-            zIndex: 999,
-            background: ACCENT,
-            color: "#09090b",
-            padding: "12px 24px",
-            fontSize: "0.8125rem",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-          }}
-        >
-          <Check size={16} />
-          Changes saved successfully! Your website is now live with the updated content.
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════ MAIN CONTENT */}
-      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 32px 100px" }}>
-
-        {/* Dashboard Welcome Header */}
-        <div style={{ marginBottom: "36px" }}>
-          <h2
-            style={{
-              fontSize: "1.75rem",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: "#ffffff",
-              margin: 0,
-            }}
-          >
-            Website Content & Admin Settings
-          </h2>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "#a1a1aa",
-              margin: "6px 0 0",
-              lineHeight: 1.6,
-            }}
-          >
-            Manage your landing page taglines, special discount offers, membership plans, active trainers, and admin access accounts.
-          </p>
+          <button onClick={onClose} className="hf-admin-close-x" style={{ marginLeft: "auto", background: "none", border: "none", color: MUTED, cursor: "pointer", padding: 4 }}>
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Overview Metric Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-            marginBottom: "40px",
-          }}
-        >
-          <div
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              borderRadius: 10,
-              padding: "20px 24px",
-            }}
-          >
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#71717a", marginBottom: 6 }}>
-              Hero Headline
-            </div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {taglineDraft.headlineMain} <span style={{ color: ACCENT }}>{taglineDraft.headlineHighlight}</span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              borderRadius: 10,
-              padding: "20px 24px",
-            }}
-          >
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#71717a", marginBottom: 6 }}>
-              Offer Announcement Bar
-            </div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: offerDraft.enabled ? ACCENT : "#f87171" }}>
-              {offerDraft.enabled ? `Active (${offerDraft.discountPercentage}% Discount)` : "Disabled"}
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              borderRadius: 10,
-              padding: "20px 24px",
-            }}
-          >
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#71717a", marginBottom: 6 }}>
-              Membership Plans
-            </div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#ffffff" }}>
-              {plansDraft.length} Plans (₹{Math.min(...plansDraft.map((p) => p.price)).toLocaleString()} – ₹{Math.max(...plansDraft.map((p) => p.price)).toLocaleString()}/mo)
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              borderRadius: 10,
-              padding: "20px 24px",
-            }}
-          >
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#71717a", marginBottom: 6 }}>
-              Coaches Roster
-            </div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: ACCENT }}>
-              {coachesDraft.length} Active Trainers
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              borderRadius: 10,
-              padding: "20px 24px",
-            }}
-          >
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "#71717a", marginBottom: 6 }}>
-              Admin Accounts
-            </div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#ffffff" }}>
-              {adminsDraft.length} Users Registered
-            </div>
+        {/* User badge */}
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ background: `${ACCENT}10`, border: `1px solid ${ACCENT}25`, borderRadius: 8, padding: "8px 12px" }}>
+            <div style={{ ...MF, fontSize: 9, color: ACCENT, letterSpacing: "0.15em" }}>LOGGED IN AS</div>
+            <div style={{ ...SF, fontSize: 12, color: TEXT, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentUserEmail}</div>
           </div>
         </div>
 
-        {(activeSection === "all" || activeSection === "enquiries") && (
-          /* ═══════════════════════════════════════ SECTION: LEADS & GOOGLE SHEETS */
-          <section
-            ref={enquiriesRef}
-            id="admin-enquiries"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-            <div style={{ marginBottom: "24px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                  <FileSpreadsheet size={20} color={ACCENT} />
-                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
-                    Lead Enquiries & Google Sheets Backend ({enquiriesDraft.length})
-                  </h3>
-                </div>
-                <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0 }}>
-                  View all incoming consultation & website membership enquiries, connect your Google Sheet Webhook, or export lead data.
-                </p>
-              </div>
-
-              {/* Quick Actions */}
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={() => {
-                    const headers = ["ID", "Submitted At", "Full Name", "Phone", "Email", "Fitness Goal", "PT Coach Choice", "Plan"];
-                    const rows = enquiriesDraft.map((l) => [
-                      l.id,
-                      `"${l.submittedAt}"`,
-                      `"${l.name}"`,
-                      `"${l.phone}"`,
-                      `"${l.email || ""}"`,
-                      `"${l.goal}"`,
-                      `"${l.preferredCoach || "None"}"`,
-                      `"${l.planName || "Free Consultation"}"`,
-                    ]);
-                    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-                    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.setAttribute("download", `Hercules_Fitness_Leads_${Date.now()}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  disabled={enquiriesDraft.length === 0}
-                  style={{
-                    background: enquiriesDraft.length > 0 ? "rgba(216, 255, 62, 0.12)" : "rgba(255, 255, 255, 0.04)",
-                    color: enquiriesDraft.length > 0 ? ACCENT : "#71717a",
-                    border: `1px solid ${enquiriesDraft.length > 0 ? "rgba(216, 255, 62, 0.3)" : "rgba(255, 255, 255, 0.08)"}`,
-                    borderRadius: 6,
-                    padding: "8px 14px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 700,
-                    cursor: enquiriesDraft.length > 0 ? "pointer" : "not-allowed",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Download size={14} /> Export CSV
-                </button>
-                {enquiriesDraft.length > 0 && (
-                  <button
-                    onClick={() => setEnquiriesDraft([])}
-                    style={{
-                      background: "rgba(239, 68, 68, 0.1)",
-                      color: "#ef4444",
-                      border: "1px solid rgba(239, 68, 68, 0.25)",
-                      borderRadius: 6,
-                      padding: "8px 14px",
-                      fontSize: "0.8125rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <Trash2 size={13} /> Clear Leads Log
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Google Sheets Webhook Setup Card */}
-            <div style={{ background: "#18181b", padding: 20, borderRadius: 10, border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: 28 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Database size={16} color={ACCENT} />
-                  <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#ffffff" }}>
-                    🔗 Google Sheets Webhook Integration (Google Apps Script)
-                  </span>
-                </div>
-                {testWebhookStatus && (
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: ACCENT }}>
-                    {testWebhookStatus}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-                <input
-                  type="url"
-                  placeholder="Paste your Google Apps Script Web App URL here (e.g. https://script.google.com/macros/s/.../exec)"
-                  value={webhookUrlDraft}
-                  onChange={(e) => setWebhookUrlDraft(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 14px",
-                    background: "#27272a",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: ACCENT,
-                    fontSize: "0.8125rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    if (!webhookUrlDraft.trim()) {
-                      setTestWebhookStatus("⚠️ Please enter a Webhook URL first.");
-                      return;
-                    }
-                    setTestWebhookStatus("⏳ Sending test lead to Google Sheet...");
-                    try {
-                      fetch(webhookUrlDraft.trim(), {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({
-                          id: "test-lead",
-                          name: "Test User (Hercules Website)",
-                          phone: "+91 99008 97907",
-                          email: "test@herculesfitness.in",
-                          goal: "Fat Loss & Muscle Gain",
-                          preferredCoach: "Coach Girish (19+ Yrs Exp)",
-                          planName: "Test Webhook Verification",
-                          submittedAt: new Date().toLocaleString(),
-                        }),
-                        mode: "no-cors",
-                      })
-                        .then(() => {
-                          setTestWebhookStatus("✅ Test payload dispatched to Google Sheet!");
-                          setTimeout(() => setTestWebhookStatus(null), 4000);
-                        })
-                        .catch(() => {
-                          setTestWebhookStatus("⚠️ Webhook sent (no-cors mode)");
-                          setTimeout(() => setTestWebhookStatus(null), 4000);
-                        });
-                    } catch (err) {
-                      setTestWebhookStatus("⚠️ Dispatched test payload.");
-                      setTimeout(() => setTestWebhookStatus(null), 4000);
-                    }
-                  }}
-                  style={{
-                    background: ACCENT,
-                    color: "#09090b",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "10px 18px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <Send size={14} /> Test Webhook
-                </button>
-              </div>
-
-              {/* Google Apps Script 1-Click Code Snippet */}
-              <div style={{ background: "#09090b", borderRadius: 8, padding: 14, border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: "0.75rem", color: "#a1a1aa", fontWeight: 600 }}>
-                    💡 How to connect Google Sheets (Google Apps Script Code):
-                  </span>
-                  <button
-                    onClick={() => {
-                      const code = `function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = JSON.parse(e.postData.contents);
-  sheet.appendRow([
-    data.submittedAt || new Date(),
-    data.name,
-    data.phone,
-    data.email || '',
-    data.goal,
-    data.preferredCoach || 'None',
-    data.planName || 'General Enquiry'
-  ]);
-  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
-}`;
-                      navigator.clipboard.writeText(code);
-                      setCopyCodeToast(true);
-                      setTimeout(() => setCopyCodeToast(false), 2500);
-                    }}
-                    style={{
-                      background: "rgba(255, 255, 255, 0.08)",
-                      border: "none",
-                      color: copyCodeToast ? ACCENT : "#ffffff",
-                      borderRadius: 4,
-                      padding: "4px 10px",
-                      fontSize: "0.6875rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <Copy size={12} /> {copyCodeToast ? "COPIED TO CLIPBOARD!" : "COPY APPS SCRIPT CODE"}
-                  </button>
-                </div>
-                <pre style={{ margin: 0, fontSize: "0.75rem", color: "#d4d4d8", fontFamily: "monospace", overflowX: "auto" }}>
-{`1. Open a Google Sheet -> Extensions -> Apps Script
-2. Paste this code:
-function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = JSON.parse(e.postData.contents);
-  sheet.appendRow([data.submittedAt, data.name, data.phone, data.email || '', data.goal, data.preferredCoach || 'None', data.planName || 'General']);
-  return ContentService.createTextOutput("OK");
-}
-3. Click Deploy -> New deployment -> Select type: Web app
-4. Set "Who has access" to "Anyone" -> Click Deploy -> Copy the Web App URL and paste above!`}
-                </pre>
-              </div>
-            </div>
-
-            {/* Enquiries Data Table */}
-            {enquiriesDraft.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: "#71717a" }}>
-                <FileSpreadsheet size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-                <p style={{ margin: 0, fontSize: "0.9375rem" }}>No lead enquiries recorded yet.</p>
-                <p style={{ margin: "4px 0 0", fontSize: "0.75rem" }}>
-                  Whenever a visitor submits a Free Consultation or 25% Web Discount inquiry, it will appear here automatically.
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", textAlign: "left" }}>
-                  <thead>
-                    <tr style={{ background: "#18181b", color: "#a1a1aa", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>DATE & TIME</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>FULL NAME</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>PHONE NUMBER</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>EMAIL ADDRESS</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>FITNESS GOAL</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700, color: ACCENT }}>PT COACH CHOICE</th>
-                      <th style={{ padding: "12px 14px", fontWeight: 700 }}>SOURCE / PLAN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {enquiriesDraft.map((lead) => (
-                      <tr key={lead.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", color: "#ffffff" }}>
-                        <td style={{ padding: "12px 14px", color: "#a1a1aa", whiteSpace: "nowrap" }}>{lead.submittedAt}</td>
-                        <td style={{ padding: "12px 14px", fontWeight: 700 }}>{lead.name}</td>
-                        <td style={{ padding: "12px 14px", color: ACCENT, fontFamily: "monospace" }}>{lead.phone}</td>
-                        <td style={{ padding: "12px 14px", color: "#d4d4d8" }}>{lead.email || "—"}</td>
-                        <td style={{ padding: "12px 14px" }}>{lead.goal}</td>
-                        <td style={{ padding: "12px 14px", color: ACCENT, fontWeight: 600 }}>{lead.preferredCoach || "Any Coach"}</td>
-                        <td style={{ padding: "12px 14px", color: "#a1a1aa" }}>{lead.planName || "Free Consultation"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "tagline") && (
-          /* ═══════════════════════════════════════ SECTION 1: TAGLINE & HERO BANNER */
-          <section
-            ref={taglineRef}
-            id="admin-tagline"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          {/* Card Header */}
-          <div style={{ marginBottom: "28px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <Type size={18} style={{ color: ACCENT }} />
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                1. Hero Banner Tagline & Headlines
-              </h3>
-            </div>
-            <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-              Control the primary headline text and introduction paragraph shown at the top of your homepage.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
-            {/* Form Fields */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Headline Line 1 (Primary Text)
-                </label>
-                <input
-                  type="text"
-                  value={taglineDraft.headlineMain}
-                  onChange={(e) => setTaglineDraft({ ...taglineDraft, headlineMain: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.9375rem",
-                    fontWeight: 600,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Main white headline text shown on the first line.
-                </p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Headline Line 2 (Highlighted Text)
-                </label>
-                <input
-                  type="text"
-                  value={taglineDraft.headlineHighlight}
-                  onChange={(e) => setTaglineDraft({ ...taglineDraft, headlineHighlight: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(216, 255, 62, 0.3)",
-                    borderRadius: 6,
-                    color: ACCENT,
-                    fontSize: "0.9375rem",
-                    fontWeight: 600,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Highlighted second line shown in lime accent color.
-                </p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Hero Subtitle Description
-                </label>
-                <textarea
-                  rows={4}
-                  value={taglineDraft.subtitle}
-                  onChange={(e) => setTaglineDraft({ ...taglineDraft, subtitle: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#d4d4d8",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.6,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Brief paragraph introducing your facility size, disciplines, and coaching philosophy.
-                </p>
-              </div>
-
-              {/* Hero Section Background Video Input */}
-              <div style={{ marginTop: 8 }}>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>
-                  🎥 Hero Section Background Video
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsHeroDragActive(true); }}
-                  onDragLeave={() => setIsHeroDragActive(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsHeroDragActive(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleHeroVideoFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => heroVideoFileInputRef.current?.click()}
-                  style={{
-                    border: `2px dashed ${isHeroDragActive ? ACCENT : "rgba(216, 255, 62, 0.3)"}`,
-                    background: isHeroDragActive ? "rgba(216, 255, 62, 0.08)" : "#18181b",
-                    borderRadius: 8,
-                    padding: "16px",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    marginBottom: 10,
-                  }}
-                >
-                  <input
-                    type="file"
-                    ref={heroVideoFileInputRef}
-                    accept="video/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleHeroVideoFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                    <Upload size={20} color={ACCENT} />
-                    <span style={{ fontSize: "0.8125rem", color: "#e4e4e7", fontWeight: 500 }}>
-                      Drag & Drop background video or <span style={{ color: ACCENT, textDecoration: "underline" }}>browse device</span>
-                    </span>
-                    <span style={{ fontSize: "0.6875rem", color: "#71717a" }}>
-                      Supports MP4, WEBM, MOV (Autoplays silently in full hero background)
-                    </span>
-                  </div>
-                </div>
-
-                <input
-                  type="text"
-                  value={taglineDraft.heroVideoUrl || ""}
-                  onChange={(e) => setTaglineDraft({ ...taglineDraft, heroVideoUrl: e.target.value })}
-                  placeholder="Or paste video URL (e.g. /hergirish_rotated.mp4 or https://...)"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: ACCENT,
-                    fontSize: "0.8125rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              {/* Editable Hero Metrics Section */}
-              <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 700, color: "#ffffff", marginBottom: 12 }}>
-                  📊 Hero Section Metrics & Statistics (4 Cards)
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  {(taglineDraft.heroMetrics || defaultSiteData.tagline.heroMetrics!).map((m, idx) => (
-                    <div key={idx} style={{ background: "#18181b", padding: 14, borderRadius: 8, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.6875rem", color: "#a1a1aa", marginBottom: 4 }}>
-                            Value (e.g. 19+ YRS)
-                          </label>
-                          <input
-                            type="text"
-                            value={m.value}
-                            onChange={(e) => {
-                              const newMetrics = [...(taglineDraft.heroMetrics || defaultSiteData.tagline.heroMetrics!)];
-                              newMetrics[idx] = { ...newMetrics[idx], value: e.target.value };
-                              setTaglineDraft({ ...taglineDraft, heroMetrics: newMetrics });
-                            }}
-                            style={{
-                              width: "100%",
-                              padding: "8px 10px",
-                              background: "#27272a",
-                              border: "1px solid rgba(255, 255, 255, 0.12)",
-                              borderRadius: 4,
-                              color: ACCENT,
-                              fontWeight: 700,
-                              fontSize: "0.8125rem",
-                              outline: "none",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.6875rem", color: "#a1a1aa", marginBottom: 4 }}>
-                            Label Subtext (e.g. TRUSTED COACHES)
-                          </label>
-                          <input
-                            type="text"
-                            value={m.label}
-                            onChange={(e) => {
-                              const newMetrics = [...(taglineDraft.heroMetrics || defaultSiteData.tagline.heroMetrics!)];
-                              newMetrics[idx] = { ...newMetrics[idx], label: e.target.value };
-                              setTaglineDraft({ ...taglineDraft, heroMetrics: newMetrics });
-                            }}
-                            style={{
-                              width: "100%",
-                              padding: "8px 10px",
-                              background: "#27272a",
-                              border: "1px solid rgba(255, 255, 255, 0.12)",
-                              borderRadius: 4,
-                              color: "#ffffff",
-                              fontSize: "0.8125rem",
-                              outline: "none",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Live Preview Box */}
-            <div
-              style={{
-                background: "#09090b",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 8,
-                padding: "28px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: 16,
-                  right: 16,
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  color: ACCENT,
-                  background: "rgba(216, 255, 62, 0.1)",
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Live Preview
-              </div>
-
-              <div style={{ fontSize: "0.6875rem", color: "#71717a", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12 }}>
-                BIDAR, KARNATAKA — EST. 2019
-              </div>
-
-              <h1
-                style={{
-                  fontSize: "2.25rem",
-                  fontWeight: 800,
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.02em",
-                  color: "#ffffff",
-                  margin: "0 0 16px",
-                  textTransform: "uppercase",
-                }}
-              >
-                {taglineDraft.headlineMain}
-                <br />
-                <span style={{ color: ACCENT }}>{taglineDraft.headlineHighlight}</span>
-              </h1>
-
-              <p style={{ color: "#a1a1aa", fontSize: "0.875rem", lineHeight: 1.6, margin: 0 }}>
-                {taglineDraft.subtitle}
-              </p>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "founder") && (
-          /* ═══════════════════════════════════════ SECTION 2: FOUNDER STORY & BEFORE-AFTER PHOTOS */
-          <section
-            ref={founderRef}
-            id="admin-founder"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(216, 255, 62, 0.2)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div style={{ marginBottom: "28px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <Award size={20} color={ACCENT} />
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
-                Founder & Head Coach Story
-              </h3>
-            </div>
-            <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0 }}>
-              Edit Coach Girish&apos;s photo, author details, and head coach quote text shown on the website.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "32px",
-            }}
-          >
-            {/* Left Inputs */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {/* Media Type Selector */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 8 }}>
-                  Head Coach Media Format (9:16 Ratio)
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setFounderDraft({ ...founderDraft, mediaType: "video" })}
-                    style={{
-                      padding: "10px 14px",
-                      background: founderDraft.mediaType === "video" ? "rgba(216, 255, 62, 0.15)" : "#18181b",
-                      border: founderDraft.mediaType === "video" ? "1px solid #D8FF3E" : "1px solid rgba(255, 255, 255, 0.1)",
-                      color: founderDraft.mediaType === "video" ? ACCENT : "#a1a1aa",
-                      borderRadius: 6,
-                      fontSize: "0.8125rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    🎥 Video Reel (9:16)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFounderDraft({ ...founderDraft, mediaType: "image" })}
-                    style={{
-                      padding: "10px 14px",
-                      background: founderDraft.mediaType === "image" ? "rgba(216, 255, 62, 0.15)" : "#18181b",
-                      border: founderDraft.mediaType === "image" ? "1px solid #D8FF3E" : "1px solid rgba(255, 255, 255, 0.1)",
-                      color: founderDraft.mediaType === "image" ? ACCENT : "#a1a1aa",
-                      borderRadius: 6,
-                      fontSize: "0.8125rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    🖼️ Photo (Image)
-                  </button>
-                </div>
-              </div>
-
-              {/* Founder Video Upload / URL */}
-              {founderDraft.mediaType === "video" ? (
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 8 }}>
-                    Coach Video Reel (Drag & Drop .MP4 or Device Upload)
-                  </label>
-
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsFounderDragActive(true);
-                    }}
-                    onDragLeave={() => setIsFounderDragActive(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsFounderDragActive(false);
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleFounderVideoFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    onClick={() => founderVideoFileInputRef.current?.click()}
-                    style={{
-                      border: `2px dashed ${isFounderDragActive ? ACCENT : "rgba(216, 255, 62, 0.4)"}`,
-                      background: isFounderDragActive ? "rgba(216, 255, 62, 0.08)" : "#18181b",
-                      borderRadius: 8,
-                      padding: "20px",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <input
-                      type="file"
-                      ref={founderVideoFileInputRef}
-                      accept="video/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleFounderVideoFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                      <Upload size={24} color={ACCENT} />
-                      <span style={{ fontSize: "0.8125rem", color: "#e4e4e7", fontWeight: 500 }}>
-                        Drag & Drop video file here or <span style={{ color: ACCENT, textDecoration: "underline" }}>browse device</span>
-                      </span>
-                      <span style={{ fontSize: "0.6875rem", color: "#71717a" }}>
-                        Supports MP4, WEBM, MOV (Autoplays vertically on scroll)
-                      </span>
-                    </div>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={founderDraft.videoUrl || ""}
-                    onChange={(e) => setFounderDraft({ ...founderDraft, videoUrl: e.target.value, mediaType: "video" })}
-                    placeholder="Or paste video URL directly (e.g. .mp4 link)..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#18181b",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.8125rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              ) : (
-                /* Founder Image Upload / URL */
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 8 }}>
-                    Head Coach Photo (Drag & Drop or Device Upload)
-                  </label>
-
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsFounderDragActive(true);
-                    }}
-                    onDragLeave={() => setIsFounderDragActive(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsFounderDragActive(false);
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleFounderImageFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    onClick={() => founderFileInputRef.current?.click()}
-                    style={{
-                      border: `2px dashed ${isFounderDragActive ? ACCENT : "rgba(255, 255, 255, 0.2)"}`,
-                      background: isFounderDragActive ? "rgba(216, 255, 62, 0.05)" : "#18181b",
-                      borderRadius: 8,
-                      padding: "20px",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <input
-                      type="file"
-                      ref={founderFileInputRef}
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleFounderImageFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                      <Upload size={24} color={isFounderDragActive ? ACCENT : "#a1a1aa"} />
-                      <span style={{ fontSize: "0.8125rem", color: "#e4e4e7", fontWeight: 500 }}>
-                        Drag & Drop photo here or <span style={{ color: ACCENT, textDecoration: "underline" }}>browse device</span>
-                      </span>
-                      <span style={{ fontSize: "0.6875rem", color: "#71717a" }}>
-                        Supports PNG, JPG, WEBP, GIF
-                      </span>
-                    </div>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={founderDraft.image}
-                    onChange={(e) => setFounderDraft({ ...founderDraft, image: e.target.value, mediaType: "image" })}
-                    placeholder="Or paste image URL directly..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#18181b",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.8125rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Head Coach Quote Words */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Head Coach Quote (Words from Coach Girish)
-                </label>
-                <textarea
-                  rows={4}
-                  value={founderDraft.quote}
-                  onChange={(e) => setFounderDraft({ ...founderDraft, quote: e.target.value })}
-                  placeholder="Enter Coach Girish's quote..."
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(216, 255, 62, 0.3)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.6,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Coach Name / Title
-                  </label>
-                  <input
-                    type="text"
-                    value={founderDraft.quoteAuthor}
-                    onChange={(e) => setFounderDraft({ ...founderDraft, quoteAuthor: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#18181b",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      fontWeight: 600,
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Experience Subtext
-                  </label>
-                  <input
-                    type="text"
-                    value={founderDraft.quoteSubtext}
-                    onChange={(e) => setFounderDraft({ ...founderDraft, quoteSubtext: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#18181b",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: ACCENT,
-                      fontSize: "0.875rem",
-                      fontWeight: 600,
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Right Live Preview Box (9:16 Ratio) */}
-            <div
-              style={{
-                background: "#09090b",
-                border: "1px solid rgba(216, 255, 62, 0.25)",
-                borderRadius: 10,
-                padding: "24px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: ACCENT, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-                LIVE PREVIEW: HEAD COACH (9:16 VERTICAL FORMAT)
-              </div>
-
-              {/* 9:16 Media Preview */}
-              <div style={{ position: "relative", height: 280, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(216, 255, 62, 0.3)", background: "#111", aspectRatio: "9/16", margin: "0 auto", width: "100%", maxWidth: 180 }}>
-                {founderDraft.mediaType === "video" && founderDraft.videoUrl ? (
-                  <video
-                    src={founderDraft.videoUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <img
-                    src={founderDraft.image}
-                    alt="Coach Preview"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
-                  />
-                )}
-                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, background: "rgba(0,0,0,0.85)", padding: "6px 8px", borderRadius: 4 }}>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#fff" }}>{founderDraft.quoteAuthor}</div>
-                  <div style={{ fontSize: "0.625rem", color: ACCENT }}>{founderDraft.quoteSubtext}</div>
-                </div>
-              </div>
-
-              {/* Quote Box Preview */}
-              <div style={{ background: "rgba(216,255,62,0.04)", borderLeft: `3px solid ${ACCENT}`, padding: "12px 14px", borderRadius: "0 6px 6px 0" }}>
-                <p style={{ fontSize: "0.8125rem", fontStyle: "italic", color: "#e4e4e7", margin: 0, lineHeight: 1.5 }}>
-                  &ldquo;{founderDraft.quote}&rdquo;
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ────────────────────────────────────────────────────────── BEFORE & AFTER TRANSFORMATION IMAGES EDITING BLOCK */}
-          <div style={{ marginTop: "36px", paddingTop: "28px", borderTop: "1px dashed rgba(216, 255, 62, 0.3)" }}>
-            <div style={{ marginBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <Sliders size={18} color={ACCENT} />
-                <h4 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
-                  Before & After Transformation Comparison Photos
-                </h4>
-              </div>
-              <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-                Update the BEFORE (Bulky/Starting) and AFTER (Transformed/Shredded) photos shown on the homepage comparison slider.
-              </p>
-
-              {/* Ideal Aspect Ratio Callout Banner */}
-              <div style={{
-                marginTop: 12,
-                background: "rgba(216, 255, 62, 0.08)",
-                border: "1px solid rgba(216, 255, 62, 0.3)",
-                borderRadius: 8,
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 12
-              }}>
-                <Sparkles size={18} color={ACCENT} style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#ffffff", marginBottom: 2 }}>
-                    💡 Ideal Image Aspect Ratio Guide
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#d4d4d8", lineHeight: 1.5 }}>
-                    For the smoothest comparison alignment, <strong>both the BEFORE and AFTER photos should have the exact same dimensions & aspect ratio</strong>.
-                    <br />
-                    • <strong>Recommended Aspect Ratio: 4:5 Portrait (e.g., 1080 × 1350 px)</strong> or <strong>1:1 Square (e.g., 1080 × 1080 px)</strong>.
-                    <br />
-                    • Ensure the person is centered and framed similarly in both photos so muscle changes align seamlessly when sliding.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px" }}>
-              {/* Before Photo Input */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>
-                  📷 BEFORE Transformation Photo
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsBeforeDragActive(true); }}
-                  onDragLeave={() => setIsBeforeDragActive(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsBeforeDragActive(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleBeforeImageFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => beforeFileInputRef.current?.click()}
-                  style={{
-                    border: `2px dashed ${isBeforeDragActive ? ACCENT : "rgba(255, 255, 255, 0.2)"}`,
-                    background: isBeforeDragActive ? "rgba(216, 255, 62, 0.08)" : "#18181b",
-                    borderRadius: 8,
-                    padding: "16px",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    marginBottom: 10,
-                  }}
-                >
-                  <input
-                    type="file"
-                    ref={beforeFileInputRef}
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleBeforeImageFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <Upload size={20} color={ACCENT} style={{ marginBottom: 6 }} />
-                  <div style={{ fontSize: "0.8125rem", color: "#e4e4e7", fontWeight: 500 }}>
-                    Drag & Drop BEFORE photo or <span style={{ color: ACCENT, textDecoration: "underline" }}>browse device</span>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={founderDraft.beforeImage || ""}
-                  onChange={(e) => setFounderDraft({ ...founderDraft, beforeImage: e.target.value })}
-                  placeholder="Or paste BEFORE image URL..."
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.8125rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              {/* After Photo Input */}
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 700, color: ACCENT, marginBottom: 8 }}>
-                  ⚡ AFTER Transformation Photo
-                </label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsAfterDragActive(true); }}
-                  onDragLeave={() => setIsAfterDragActive(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsAfterDragActive(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleAfterImageFile(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => afterFileInputRef.current?.click()}
-                  style={{
-                    border: `2px dashed ${isAfterDragActive ? ACCENT : "rgba(216, 255, 62, 0.4)"}`,
-                    background: isAfterDragActive ? "rgba(216, 255, 62, 0.08)" : "#18181b",
-                    borderRadius: 8,
-                    padding: "16px",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    marginBottom: 10,
-                  }}
-                >
-                  <input
-                    type="file"
-                    ref={afterFileInputRef}
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleAfterImageFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <Upload size={20} color={ACCENT} style={{ marginBottom: 6 }} />
-                  <div style={{ fontSize: "0.8125rem", color: "#e4e4e7", fontWeight: 500 }}>
-                    Drag & Drop AFTER photo or <span style={{ color: ACCENT, textDecoration: "underline" }}>browse device</span>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={founderDraft.afterImage || ""}
-                  onChange={(e) => setFounderDraft({ ...founderDraft, afterImage: e.target.value })}
-                  placeholder="Or paste AFTER image URL..."
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.8125rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Live Interactive Before/After Comparison Preview */}
-            <div style={{ marginTop: 24, background: "#09090b", border: "1px solid rgba(216, 255, 62, 0.25)", borderRadius: 10, padding: 20 }}>
-              <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: ACCENT, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>
-                LIVE PREVIEW: INTERACTIVE BEFORE/AFTER SLIDER
-              </div>
-              <div style={{ position: "relative", width: "100%", height: 260, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", background: "#111" }}>
-                {/* After Image */}
-                <img
-                  src={founderDraft.afterImage || "/transformations/girish_after.png"}
-                  alt="After preview"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }}
-                />
-                {/* Before Image */}
-                <img
-                  src={founderDraft.beforeImage || "/transformations/girish_before.png"}
-                  alt="Before preview"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: "top center",
-                    clipPath: `polygon(0 0, ${transSliderPos}% 0, ${transSliderPos}% 100%, 0 100%)`,
-                    WebkitClipPath: `polygon(0 0, ${transSliderPos}% 0, ${transSliderPos}% 100%, 0 100%)`,
-                  }}
-                />
-                {/* Labels */}
-                <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.8)", color: "#fff", padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700 }}>
-                  BEFORE
-                </div>
-                <div style={{ position: "absolute", top: 10, right: 10, background: ACCENT, color: "#000", padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
-                  AFTER
-                </div>
-                {/* Slider Line */}
-                <div style={{ position: "absolute", top: 0, bottom: 0, left: `${transSliderPos}%`, width: 2, background: ACCENT, transform: "translateX(-50%)" }}>
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 24, height: 24, borderRadius: "50%", background: ACCENT, color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900 }}>
-                    ↔
-                  </div>
-                </div>
-              </div>
-              {/* Slider Range Control */}
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: "0.75rem", color: "#a1a1aa" }}>Test slider drag:</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={transSliderPos}
-                  onChange={(e) => setTransSliderPos(Number(e.target.value))}
-                  style={{ flex: 1, accentColor: ACCENT }}
-                />
-                <span style={{ fontSize: "0.75rem", color: ACCENT, fontWeight: 700 }}>{transSliderPos}%</span>
-              </div>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "offers") && (
-          /* ═══════════════════════════════════════ SECTION 3: OFFERS */
-          <section
-            ref={offersRef}
-            id="admin-offers"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div style={{ marginBottom: "28px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <Tag size={18} style={{ color: ACCENT }} />
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                2. Special Offers & Promotional Banner
-              </h3>
-            </div>
-            <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-              Enable and customize the top announcement offer banner displayed across all pages.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* Toggle Switch */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                background: "#18181b",
-                padding: "16px 20px",
-                borderRadius: 8,
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              <input
-                type="checkbox"
-                id="offerToggle"
-                checked={offerDraft.enabled}
-                onChange={(e) => setOfferDraft({ ...offerDraft, enabled: e.target.checked })}
-                style={{ width: 18, height: 18, accentColor: ACCENT, cursor: "pointer" }}
-              />
-              <div>
-                <label htmlFor="offerToggle" style={{ fontSize: "0.875rem", fontWeight: 600, color: "#ffffff", cursor: "pointer" }}>
-                  Show Top Offer Announcement Banner
-                </label>
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "2px 0 0" }}>
-                  When enabled, this banner will appear at the very top of the landing page.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                Announcement Banner Text
-              </label>
-              <input
-                type="text"
-                value={offerDraft.announcementText}
-                onChange={(e) => setOfferDraft({ ...offerDraft, announcementText: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  background: "#18181b",
-                  border: "1px solid rgba(255, 255, 255, 0.12)",
-                  borderRadius: 6,
-                  color: "#ffffff",
-                  fontSize: "0.875rem",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-              <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0", lineHeight: 1.5 }}>
-                The exact promotional text displayed in the top banner (e.g. discount details or limited seats).
-              </p>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Offer Badge Title
-                </label>
-                <input
-                  type="text"
-                  value={offerDraft.badgeText}
-                  onChange={(e) => setOfferDraft({ ...offerDraft, badgeText: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0" }}>
-                  Short tag title (e.g. LIMITED OFFER).
-                </p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Discount Percentage (%)
-                </label>
-                <input
-                  type="number"
-                  value={offerDraft.discountPercentage}
-                  onChange={(e) =>
-                    setOfferDraft({
-                      ...offerDraft,
-                      discountPercentage: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#18181b",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "6px 0 0" }}>
-                  Discount rate applied to special promotions.
-                </p>
-              </div>
-            </div>
-
-            {/* Live Ticker Bar Preview */}
-            {offerDraft.enabled && (
-              <div
-                style={{
-                  background: ACCENT,
-                  color: "#09090b",
-                  padding: "12px 20px",
-                  borderRadius: 6,
-                  fontSize: "0.8125rem",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                }}
-              >
-                <Tag size={16} />
-                <span>Preview: {offerDraft.announcementText}</span>
-              </div>
-            )}
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "prices") && (
-          /* ═══════════════════════════════════════ SECTION 4: PRICES & PLANS */
-          <section
-            ref={pricesRef}
-            id="admin-prices"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div style={{ marginBottom: "28px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <DollarSign size={18} style={{ color: ACCENT }} />
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                3. Membership Pricing Plans
-              </h3>
-            </div>
-            <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-              Update monthly plan costs, badge highlights, and feature lists. Changes automatically reflect on membership cards.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "24px",
-            }}
-          >
-            {plansDraft.map((plan, index) => (
-              <div
-                key={plan.id}
-                style={{
-                  background: "#18181b",
-                  border: plan.popular
-                    ? "1px solid rgba(216, 255, 62, 0.3)"
-                    : "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: 10,
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "16px",
-                      borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-                      paddingBottom: "12px",
-                    }}
-                  >
-                    <span style={{ fontSize: "1.0625rem", fontWeight: 700, color: "#ffffff" }}>
-                      Plan #{index + 1}: {plan.name}
-                    </span>
-                    {plan.popular && (
-                      <span
-                        style={{
-                          fontSize: "0.6875rem",
-                          fontWeight: 600,
-                          background: ACCENT,
-                          color: "#09090b",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                        }}
-                      >
-                        Popular Card
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                      Plan Name
-                    </label>
-                    <input
-                      type="text"
-                      value={plan.name}
-                      onChange={(e) => handleUpdatePlanName(plan.id, e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        background: "#27272a",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        borderRadius: 6,
-                        color: "#ffffff",
-                        fontSize: "0.875rem",
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "16px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#ffffff", marginBottom: 6 }}>
-                        Standard Gym Price (₹)
-                      </label>
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#ffffff", fontWeight: 700 }}>
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          value={plan.price}
-                          onChange={(e) => handleUpdatePlanPrice(plan.id, parseInt(e.target.value))}
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px 10px 28px",
-                            background: "#27272a",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
-                            borderRadius: 6,
-                            color: "#ffffff",
-                            fontSize: "0.95rem",
-                            fontWeight: 700,
-                            outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: ACCENT, marginBottom: 6 }}>
-                        Website Offer CTA Price (₹)
-                      </label>
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: ACCENT, fontWeight: 700 }}>
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          value={plan.offerPrice !== undefined ? plan.offerPrice : Math.round(plan.price * 0.75)}
-                          onChange={(e) => handleUpdatePlanOfferPrice(plan.id, parseInt(e.target.value))}
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px 10px 28px",
-                            background: "#27272a",
-                            border: "1px solid rgba(216, 255, 62, 0.4)",
-                            borderRadius: 6,
-                            color: ACCENT,
-                            fontSize: "1rem",
-                            fontWeight: 700,
-                            outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#FF3E3E", marginBottom: 6 }}>
-                      Website Offer Tag Pill Text
-                    </label>
-                    <input
-                      type="text"
-                      value={plan.offerTag || "⚡ GET 25% OFF VIA WEBSITE INQUIRY"}
-                      onChange={(e) => handleUpdatePlanOfferTag(plan.id, e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        background: "#27272a",
-                        border: "1px solid rgba(255, 62, 62, 0.25)",
-                        borderRadius: 6,
-                        color: "#FF3E3E",
-                        fontSize: "0.8125rem",
-                        fontWeight: 600,
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                      Badge Text (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={plan.badge || ""}
-                      placeholder="e.g. MOST POPULAR"
-                      onChange={(e) => handleUpdatePlanBadge(plan.id, e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        background: "#27272a",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        borderRadius: 6,
-                        color: "#ffffff",
-                        fontSize: "0.875rem",
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                      Included Features (One feature per line)
-                    </label>
-                    <textarea
-                      rows={5}
-                      value={plan.features.join("\n")}
-                      onChange={(e) => handleUpdatePlanFeatures(plan.id, e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        background: "#27272a",
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                        borderRadius: 6,
-                        color: "#d4d4d8",
-                        fontSize: "0.8125rem",
-                        lineHeight: 1.6,
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "coaches") && (
-          /* ═══════════════════════════════════════ SECTION 5: COACHES */
-          <section
-            ref={coachesRef}
-            id="admin-coaches"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "28px",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-              paddingBottom: "20px",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <Users size={18} style={{ color: ACCENT }} />
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                  4. Coaches & Fitness Trainers Roster
-                </h3>
-              </div>
-              <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-                Register new joining coaches, update specialties and profiles, or remove resigning trainers.
-              </p>
-            </div>
-
-            <button
-              onClick={handleOpenAddCoach}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: ACCENT,
-                color: "#09090b",
-                border: "none",
-                borderRadius: 6,
-                padding: "10px 18px",
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={16} />
-              Register New Coach
-            </button>
-          </div>
-
-          {/* Inline Form to Register / Edit Coach */}
-          {isAddingCoach && (
-            <div
-              style={{
-                background: "#18181b",
-                border: "1px solid rgba(216, 255, 62, 0.3)",
-                borderRadius: 10,
-                padding: "28px",
-                marginBottom: "28px",
-              }}
-            >
-              <h4 style={{ fontSize: "1.125rem", fontWeight: 600, color: ACCENT, margin: "0 0 20px" }}>
-                {editingCoachId ? "Edit Coach Profile" : "Register New Coach"}
-              </h4>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "16px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Coach Name (e.g. VIKAS GOWDA)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="VIKAS GOWDA"
-                    value={coachForm.title}
-                    onChange={(e) => setCoachForm({ ...coachForm, title: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                  <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                    Full name of the coach.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Specialty Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Powerlifting & Body Recomp"
-                    value={coachForm.subtitle}
-                    onChange={(e) => setCoachForm({ ...coachForm, subtitle: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                  <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                    Main discipline or focus area.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "16px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Experience / Role Badge (e.g. 8+ YEARS EXPERIENCE)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="8+ YEARS EXPERIENCE"
-                    value={coachForm.meta}
-                    onChange={(e) => setCoachForm({ ...coachForm, meta: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Coach Photo (Upload from Device)
-                  </label>
-
-                  {/* Hidden Device File Picker Input */}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) {
-                        handleImageFile(e.target.files[0]);
-                      }
-                    }}
-                    style={{ display: "none" }}
-                  />
-
-                  {/* Drag and Drop Zone */}
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragActive(true);
-                    }}
-                    onDragLeave={() => setIsDragActive(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragActive(false);
-                      if (e.dataTransfer.files?.[0]) {
-                        handleImageFile(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    style={{
-                      border: isDragActive
-                        ? "2px dashed #D8FF3E"
-                        : "2px dashed rgba(255, 255, 255, 0.2)",
-                      borderRadius: 8,
-                      padding: "14px 18px",
-                      background: isDragActive
-                        ? "rgba(216, 255, 62, 0.08)"
-                        : "#27272a",
-                      cursor: "pointer",
-                      textAlign: "center",
-                      transition: "all 0.2s ease",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                    }}
-                  >
-                    {coachForm.image ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", justifyContent: "center" }}>
-                        <img
-                          src={coachForm.image}
-                          alt="Coach Preview"
-                          style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 8,
-                            objectFit: "cover",
-                            border: "1px solid rgba(216, 255, 62, 0.5)",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div style={{ textAlign: "left" }}>
-                          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: ACCENT, display: "block" }}>
-                            Photo Attached
-                          </span>
-                          <span style={{ fontSize: "0.75rem", color: "#a1a1aa" }}>
-                            Drag a new image or click to replace from device
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <UploadCloud size={24} style={{ color: ACCENT }} />
-                        <div>
-                          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#ffffff" }}>
-                            Drag & drop photo here, or <span style={{ color: ACCENT, textDecoration: "underline" }}>click to upload</span>
-                          </span>
-                          <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "3px 0 0" }}>
-                            Upload PNG, JPG, or WEBP directly from your computer or phone.
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Skill Tags (Comma-separated)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Strength, HIIT, Nutrition"
-                  value={coachForm.tags}
-                  onChange={(e) => setCoachForm({ ...coachForm, tags: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#27272a",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Coach Biography
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Specialized coaching background..."
-                  value={coachForm.desc}
-                  onChange={(e) => setCoachForm({ ...coachForm, desc: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#27272a",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#d4d4d8",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.5,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  onClick={handleSaveCoach}
-                  style={{
-                    background: ACCENT,
-                    color: "#09090b",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "10px 18px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {editingCoachId ? "Update Profile" : "Confirm & Save Coach"}
-                </button>
-                <button
-                  onClick={() => setIsAddingCoach(false)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e4e4e7",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: 6,
-                    padding: "10px 16px",
-                    fontSize: "0.8125rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Active Coaches List */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {coachesDraft.map((coach, index) => (
-              <div
-                key={coach.id}
-                style={{
-                  background: "#18181b",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: 10,
-                  padding: "20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: 16,
-                }}
-              >
-                <div style={{ display: "flex", gap: 16 }}>
-                  <img
-                    src={coach.image}
-                    alt={coach.title}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 8,
-                      objectFit: "cover",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: ACCENT }}>
-                        #{index + 1}
-                      </span>
-                      <h4 style={{ fontSize: "1rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
-                        {coach.title}
-                      </h4>
-                    </div>
-                    <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: "3px 0 6px" }}>
-                      {coach.subtitle}
-                    </p>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {coach.tags.map((t) => (
-                        <span
-                          key={t}
-                          style={{
-                            fontSize: "0.6875rem",
-                            background: "rgba(255, 255, 255, 0.06)",
-                            color: "#d4d4d8",
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                          }}
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-                    paddingTop: "12px",
-                  }}
-                >
-                  <span style={{ fontSize: "0.75rem", color: "#71717a" }}>{coach.meta}</span>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => handleOpenEditCoach(coach)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.06)",
-                        color: "#e4e4e7",
-                        border: "none",
-                        borderRadius: 6,
-                        padding: "6px 12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Edit3 size={13} />
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteCoach(coach.id, coach.title)}
-                      style={{
-                        background: "rgba(239, 68, 68, 0.1)",
-                        color: "#f87171",
-                        border: "1px solid rgba(239, 68, 68, 0.2)",
-                        borderRadius: 6,
-                        padding: "6px 12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Trash2 size={13} />
-                      Resigned
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "blogs") && (
-          /* ═══════════════════════════════════════ SECTION 6: BLOGS & FITNESS ARTICLES */
-          <section
-            ref={blogsRef}
-            id="blogs-management"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "28px",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-              paddingBottom: "20px",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <BookOpen size={18} style={{ color: ACCENT }} />
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                  Blogs & Fitness Articles Manager
-                </h3>
-              </div>
-              <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-                Add, edit, or remove fitness blog articles and Q&A guides displayed in the website footer.
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                if (isAddingBlog) {
-                  setIsAddingBlog(false);
-                  setEditingBlogId(null);
-                } else {
-                  setEditingBlogId(null);
-                  setBlogForm({
-                    id: "",
-                    title: "",
-                    subtitle: "",
-                    category: "GUIDE",
-                    author: "Coach Girish",
-                    date: "August 2024",
-                    content: "",
-                  });
-                  setIsAddingBlog(true);
-                }
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: ACCENT,
-                color: "#09090b",
-                border: "none",
-                borderRadius: 6,
-                padding: "10px 18px",
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={16} />
-              {isAddingBlog ? "Cancel" : "Add New Blog Article"}
-            </button>
-          </div>
-
-          {/* Add / Edit Blog Article Form */}
-          {isAddingBlog && (
-            <form
-              onSubmit={handleSaveBlogForm}
-              style={{
-                background: "#18181b",
-                border: "1px solid rgba(216, 255, 62, 0.3)",
-                borderRadius: 10,
-                padding: "28px",
-                marginBottom: "28px",
-              }}
-            >
-              <h4 style={{ fontSize: "1.125rem", fontWeight: 600, color: ACCENT, margin: "0 0 20px" }}>
-                {editingBlogId ? "Edit Blog Article" : "Create New Blog Article"}
-              </h4>
-
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Blog Question / Title (Required)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Best Time to Join a Gym in Kalaburagi"
-                    value={blogForm.title}
-                    onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                  <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                    This question/title appears as the clickable link in the website footer.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Category / Tag
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. GUIDE, NUTRITION, BEGINNER"
-                    value={blogForm.category}
-                    onChange={(e) => setBlogForm({ ...blogForm, category: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Author Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Coach Girish"
-                    value={blogForm.author}
-                    onChange={(e) => setBlogForm({ ...blogForm, author: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Subtitle / Short Summary
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Morning vs Evening Training & Consistency Secrets"
-                  value={blogForm.subtitle || ""}
-                  onChange={(e) => setBlogForm({ ...blogForm, subtitle: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#27272a",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                  Full Article Content (Required)
-                </label>
-                <textarea
-                  rows={8}
-                  required
-                  placeholder="Enter the complete blog article text here..."
-                  value={blogForm.content}
-                  onChange={(e) => setBlogForm({ ...blogForm, content: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    background: "#27272a",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: 6,
-                    color: "#ffffff",
-                    fontSize: "0.875rem",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    lineHeight: 1.6,
-                    boxSizing: "border-box",
-                  }}
-                />
-                <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                  Separate paragraphs using double line breaks.
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingBlog(false);
-                    setEditingBlogId(null);
-                  }}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.06)",
-                    color: "#a1a1aa",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "10px 18px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: ACCENT,
-                    color: "#09090b",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "10px 20px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {editingBlogId ? "Update Blog Article" : "Save & Publish Article"}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* List of Published Blogs */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
-            {blogsDraft.map((blog) => (
-              <div
-                key={blog.id}
-                style={{
-                  background: "#18181b",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: 10,
-                  padding: "18px 20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span
-                      style={{
-                        fontSize: "0.6875rem",
-                        fontWeight: 700,
-                        background: "rgba(216, 255, 62, 0.12)",
-                        color: ACCENT,
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      {blog.category || "GUIDE"}
-                    </span>
-                    <span style={{ fontSize: "0.75rem", color: "#71717a" }}>{blog.date || "August 2024"}</span>
-                  </div>
-
-                  <h4 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#ffffff", margin: "0 0 6px", lineHeight: 1.4 }}>
-                    {blog.title}
-                  </h4>
-
-                  {blog.subtitle && (
-                    <p style={{ fontSize: "0.78125rem", color: "#a1a1aa", margin: "0 0 12px", lineHeight: 1.5 }}>
-                      {blog.subtitle}
-                    </p>
-                  )}
-
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#71717a",
-                      margin: "0 0 16px",
-                      lineHeight: 1.5,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {blog.content}
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-                    paddingTop: 12,
-                  }}
-                >
-                  <span style={{ fontSize: "0.75rem", color: "#a1a1aa" }}>By {blog.author || "Coach Girish"}</span>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => handleOpenEditBlog(blog)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.06)",
-                        color: "#e4e4e7",
-                        border: "none",
-                        borderRadius: 6,
-                        padding: "6px 12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Edit3 size={13} />
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteBlog(blog.id, blog.title)}
-                      style={{
-                        background: "rgba(239, 68, 68, 0.1)",
-                        color: "#f87171",
-                        border: "1px solid rgba(239, 68, 68, 0.2)",
-                        borderRadius: 6,
-                        padding: "6px 12px",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Trash2 size={13} />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "policies") && (
-          /* ═══════════════════════════════════════ SECTION 7: LEGAL POLICIES */
-          <section
-            ref={policiesRef}
-            id="policies-management"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-            <div style={{ marginBottom: "28px", borderBottom: "1px solid rgba(255, 255, 255, 0.06)", paddingBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <Scale size={20} color={ACCENT} />
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>
-                  Legal Policies Manager (Privacy, Terms & Refunds)
-                </h3>
-              </div>
-              <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0 }}>
-                Edit the official Privacy Policy, Terms & Conditions, and Refund Policy displayed when users click footer legal links.
-              </p>
-            </div>
-
-            {/* Policy Selector Tabs */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
-              {[
-                { id: "privacy", label: "Privacy Policy" },
-                { id: "terms", label: "Terms & Conditions" },
-                { id: "refunds", label: "Refund Policy" },
-              ].map((pTab) => {
-                const isActive = activePolicyTab === pTab.id;
-                return (
-                  <button
-                    key={pTab.id}
-                    onClick={() => setActivePolicyTab(pTab.id as any)}
-                    style={{
-                      background: isActive ? ACCENT : "#18181b",
-                      color: isActive ? "#09090b" : "#a1a1aa",
-                      border: isActive ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius: 6,
-                      padding: "10px 20px",
-                      fontSize: "0.8125rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    {pTab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Policy Textarea Editor */}
-            <div style={{ background: "#18181b", padding: 24, borderRadius: 10, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
-              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 700, color: ACCENT, marginBottom: 8 }}>
-                {activePolicyTab === "privacy" && "Editing Privacy Policy"}
-                {activePolicyTab === "terms" && "Editing Terms & Conditions"}
-                {activePolicyTab === "refunds" && "Editing Refund & Cancellation Policy"}
-              </label>
-
-              <textarea
-                rows={16}
-                value={
-                  activePolicyTab === "privacy"
-                    ? policiesDraft.privacyPolicy
-                    : activePolicyTab === "terms"
-                    ? policiesDraft.termsAndConditions
-                    : policiesDraft.refundPolicy
-                }
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (activePolicyTab === "privacy") {
-                    setPoliciesDraft({ ...policiesDraft, privacyPolicy: val });
-                  } else if (activePolicyTab === "terms") {
-                    setPoliciesDraft({ ...policiesDraft, termsAndConditions: val });
-                  } else {
-                    setPoliciesDraft({ ...policiesDraft, refundPolicy: val });
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  padding: "16px",
-                  background: "#27272a",
-                  border: "1px solid rgba(255, 255, 255, 0.12)",
-                  borderRadius: 8,
-                  color: "#ffffff",
-                  fontSize: "0.875rem",
-                  lineHeight: 1.7,
-                  fontFamily: "monospace",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-              <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "8px 0 0" }}>
-                Markdown headings (# and ##) and bullet points (*) are formatted automatically in the website legal reader modal.
-              </p>
-            </div>
-          </section>
-        )}
-
-        {(activeSection === "all" || activeSection === "admins") && (
-          /* ═══════════════════════════════════════ SECTION 7: ADMIN USERS */
-          <section
-            ref={adminsRef}
-            id="admin-management"
-            style={{
-              background: "#121215",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 12,
-              padding: "32px",
-              marginBottom: "40px",
-            }}
-          >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: "28px",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-              paddingBottom: "20px",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <ShieldCheck size={18} style={{ color: ACCENT }} />
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#ffffff", margin: 0 }}>
-                  5. Admin Access & User Management
-                </h3>
-              </div>
-              <p style={{ fontSize: "0.8125rem", color: "#a1a1aa", margin: 0, lineHeight: 1.5 }}>
-                Grant login credentials for co-owners or staff managers to access this admin panel.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsAddingAdmin(!isAddingAdmin)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: ACCENT,
-                color: "#09090b",
-                border: "none",
-                borderRadius: 6,
-                padding: "10px 18px",
-                fontSize: "0.8125rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              <UserPlus size={16} />
-              {isAddingAdmin ? "Cancel" : "Add Another Admin"}
-            </button>
-          </div>
-
-          {/* New Admin Registration Form */}
-          {isAddingAdmin && (
-            <form
-              onSubmit={handleCreateNewAdmin}
-              style={{
-                background: "#18181b",
-                border: "1px solid rgba(216, 255, 62, 0.3)",
-                borderRadius: 10,
-                padding: "28px",
-                marginBottom: "28px",
-              }}
-            >
-              <h4 style={{ fontSize: "1.125rem", fontWeight: 600, color: ACCENT, margin: "0 0 20px" }}>
-                Create New Admin Account
-              </h4>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Admin Email ID (Required)
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="manager@hercules.com"
-                    value={newAdminForm.email}
-                    onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                  <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                    Login email address.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Admin Password (Required)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Set secret password"
-                    value={newAdminForm.password}
-                    onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                  <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "4px 0 0" }}>
-                    Account password.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#e4e4e7", marginBottom: 6 }}>
-                    Role / Title
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Co-Owner, Gym Manager"
-                    value={newAdminForm.role}
-                    onChange={(e) => setNewAdminForm({ ...newAdminForm, role: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "#27272a",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 6,
-                      color: "#ffffff",
-                      fontSize: "0.875rem",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  type="submit"
-                  style={{
-                    background: ACCENT,
-                    color: "#09090b",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "10px 18px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Create Admin Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingAdmin(false)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e4e4e7",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: 6,
-                    padding: "10px 16px",
-                    fontSize: "0.8125rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Registered Admin Accounts */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {adminsDraft.map((admin) => {
-              const isSuper = admin.email.toLowerCase() === "abcd@gmail.com";
-              const isVisible = !!showAdminPass[admin.id];
-              return (
-                <div
-                  key={admin.id}
-                  style={{
-                    background: "#18181b",
-                    border: isSuper
-                      ? "1px solid rgba(216, 255, 62, 0.3)"
-                      : "1px solid rgba(255, 255, 255, 0.08)",
-                    borderRadius: 8,
-                    padding: "16px 20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 16,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 6,
-                        background: isSuper ? "rgba(216, 255, 62, 0.12)" : "rgba(255, 255, 255, 0.06)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: isSuper ? ACCENT : "#a1a1aa",
-                      }}
-                    >
-                      <ShieldCheck size={20} />
-                    </div>
-
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#ffffff" }}>
-                          {admin.email}
-                        </span>
-                        {isSuper && (
-                          <span
-                            style={{
-                              fontSize: "0.6875rem",
-                              fontWeight: 600,
-                              background: ACCENT,
-                              color: "#09090b",
-                              padding: "2px 8px",
-                              borderRadius: 4,
-                            }}
-                          >
-                            Primary Owner
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: "0.75rem", color: "#a1a1aa", margin: "2px 0 0" }}>
-                        Role: {admin.role} • Registered: {admin.addedAt}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    {/* Password Field */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        background: "#27272a",
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                      }}
-                    >
-                      <KeyRound size={13} style={{ color: "#71717a" }} />
-                      <span style={{ fontSize: "0.8125rem", color: ACCENT, fontWeight: 600 }}>
-                        {isVisible ? admin.password : "••••••••"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleShowPass(admin.id)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#a1a1aa",
-                          cursor: "pointer",
-                          padding: 2,
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        {isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-
-                    {!isSuper && (
-                      <button
-                        onClick={() => handleDeleteAdmin(admin.id, admin.email)}
-                        style={{
-                          background: "rgba(239, 68, 68, 0.1)",
-                          color: "#f87171",
-                          border: "1px solid rgba(239, 68, 68, 0.2)",
-                          borderRadius: 6,
-                          padding: "6px 12px",
-                          fontSize: "0.75rem",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <UserX size={14} />
-                        Revoke Access
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-        )}
-
-      </main>
-
-      {/* Floating Save Button */}
-      <div style={{ position: "fixed", bottom: 32, right: 32, zIndex: 1000 }}>
-        <button
-          onClick={handleSaveAll}
-          disabled={!isDirty}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: isDirty ? ACCENT : "rgba(24, 24, 27, 0.95)",
-            color: isDirty ? "#09090b" : "#e4e4e7",
-            border: isDirty ? "none" : "1px solid rgba(216, 255, 62, 0.4)",
-            borderRadius: 30,
-            padding: "14px 28px",
-            fontSize: "0.875rem",
-            fontWeight: 700,
-            cursor: isDirty ? "pointer" : "not-allowed",
-            boxShadow: isDirty
-              ? "0 10px 30px rgba(216, 255, 62, 0.35), 0 4px 12px rgba(0,0,0,0.8)"
-              : "0 10px 30px rgba(0,0,0,0.8)",
-            transition: "all 0.15s ease",
-            opacity: isDirty ? 1 : 0.85,
-            backdropFilter: "blur(12px)",
-          }}
-          onMouseEnter={(e) => {
-            if (isDirty) e.currentTarget.style.transform = "scale(1.04)";
-          }}
-          onMouseLeave={(e) => {
-            if (isDirty) e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          {isDirty ? <Save size={18} /> : <Check size={18} style={{ color: ACCENT }} />}
-          {isDirty ? "Save All Changes" : "All Changes Saved"}
-        </button>
+        {/* Nav Items */}
+        <nav style={{ flex: 1, overflowY: "auto", padding: "12px 0", WebkitOverflowScrolling: "touch" }}>
+          {NAV_ITEMS.filter(n => !n.dev).map(item => (
+            <NavBtn key={item.id} item={item} active={activePage === item.id} onClick={() => { setActivePage(item.id); setSidebarOpen(false); }} />
+          ))}
+
+          {/* Developer section divider */}
+          <div style={{ margin: "16px 16px 8px", borderTop: `1px solid ${BORDER}` }} />
+          <div style={{ ...MF, fontSize: 8, color: "#FF3E3E", letterSpacing: "0.2em", padding: "0 16px 6px" }}>⚠️ DEVELOPER</div>
+          {NAV_ITEMS.filter(n => n.dev).map(item => (
+            <NavBtn key={item.id} item={item} active={activePage === item.id} onClick={() => { setActivePage(item.id); setSidebarOpen(false); }} dev />
+          ))}
+        </nav>
+
+        {/* Logout */}
+        <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORDER}` }}>
+          <button onClick={() => { onLogout(); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: `1px solid rgba(255,62,62,0.2)`, borderRadius: 8, padding: "10px 14px", color: "#FF3E3E", cursor: "pointer", ...SF, fontSize: 13, fontWeight: 600 }}>
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
       </div>
 
-      {/* ⚡ VIBRANT THEMED CONFIRMATION MODAL */}
-      {confirmModal.isOpen && (
+      {/* ═══ MOBILE OVERLAY BACKDROP ══════════════════════════════════════ */}
+      {sidebarOpen && (
         <div
+          className="hf-admin-overlay"
+          onClick={() => setSidebarOpen(false)}
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999999,
-            background: "rgba(0, 0, 0, 0.85)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px",
-            animation: "adminModalFadeIn 0.2s ease-out forwards",
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            zIndex: 99998,
+            cursor: "pointer",
           }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 440,
-              background: "#121216",
-              border: confirmModal.isDanger
-                ? "1px solid rgba(239, 68, 68, 0.45)"
-                : "1px solid rgba(216, 255, 62, 0.45)",
-              borderRadius: 16,
-              padding: "28px",
-              boxShadow: confirmModal.isDanger
-                ? "0 25px 60px rgba(239, 68, 68, 0.25), 0 0 50px rgba(0, 0, 0, 0.95)"
-                : "0 25px 60px rgba(216, 255, 62, 0.2), 0 0 50px rgba(0, 0, 0, 0.95)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  background: confirmModal.isDanger
-                    ? "rgba(239, 68, 68, 0.15)"
-                    : "rgba(216, 255, 62, 0.15)",
-                  border: confirmModal.isDanger
-                    ? "1px solid rgba(239, 68, 68, 0.4)"
-                    : "1px solid rgba(216, 255, 62, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: confirmModal.isDanger ? "#ef4444" : ACCENT,
-                  flexShrink: 0,
-                }}
-              >
-                <AlertTriangle size={24} />
-              </div>
+        />
+      )}
 
-              <div>
-                <h3
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: 800,
-                    color: "#ffffff",
-                    margin: "0 0 6px",
-                    letterSpacing: "-0.01em",
-                    fontFamily: '"Inter", sans-serif',
-                  }}
-                >
-                  {confirmModal.title}
-                </h3>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#a1a1aa",
-                    margin: 0,
-                    lineHeight: 1.5,
-                    fontFamily: '"Inter", sans-serif',
-                  }}
-                >
-                  {confirmModal.message}
-                </p>
-              </div>
-            </div>
+      {/* ═══ MAIN CONTENT ═════════════════════════════════════════════════ */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden" }}>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
-              {confirmModal.cancelText && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    color: "#e4e4e7",
-                    border: "1px solid rgba(255, 255, 255, 0.14)",
-                    borderRadius: 8,
-                    padding: "10px 18px",
-                    fontSize: "0.8125rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {confirmModal.cancelText}
-                </button>
-              )}
+        {/* Top bar */}
+        <div style={{ height: 56, background: SURFACE, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, flexShrink: 0, zIndex: 1 }}>
+          <button className="hf-admin-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: TEXT, cursor: "pointer", display: "none", padding: 4 }}>
+            <Menu size={20} />
+          </button>
+          <div style={{ ...SF, fontSize: 14, color: MUTED, display: "flex", alignItems: "center" }}>
+            {NAV_ITEMS.find(n => n.id === activePage)?.icon}
+          </div>
+          <div style={{ ...SF, fontSize: 14, fontWeight: 600, color: TEXT }}>
+            {NAV_ITEMS.find(n => n.id === activePage)?.label}
+          </div>
 
-              <button
-                type="button"
-                onClick={confirmModal.onConfirm}
-                style={{
-                  background: confirmModal.isDanger ? "#ef4444" : ACCENT,
-                  color: confirmModal.isDanger ? "#ffffff" : "#09090b",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 20px",
-                  fontSize: "0.8125rem",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  letterSpacing: "0.02em",
-                  boxShadow: confirmModal.isDanger
-                    ? "0 4px 16px rgba(239, 68, 68, 0.4)"
-                    : "0 4px 16px rgba(216, 255, 62, 0.4)",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {confirmModal.confirmText}
-              </button>
-            </div>
+          {/* Save button */}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <Btn onClick={save} variant="primary" small>
+              <Save size={13} /> Save Changes
+            </Btn>
+            <button onClick={onClose} style={{ background: "none", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 6, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <X size={14} />
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Page content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 48px" }}>
+          <PageRouter
+            page={activePage}
+            draft={draft}
+            updateDraft={updateDraft}
+            showToast={showToast}
+            onResetData={onResetData}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .hf-admin-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100dvh !important;
+            z-index: 100000 !important;
+            transform: ${sidebarOpen ? "translateX(0)" : "translateX(-100%)"} !important;
+            width: 280px !important;
+            max-width: 85vw !important;
+            box-shadow: 10px 0 40px rgba(0,0,0,0.8) !important;
+          }
+          .hf-admin-menu-btn { display: inline-flex !important; }
+          .hf-admin-close-x { display: inline-flex !important; }
+          .hf-admin-overlay { display: block !important; }
+        }
+        @media (min-width: 769px) {
+          .hf-admin-sidebar {
+            transform: none !important;
+            z-index: 10 !important;
+          }
+          .hf-admin-menu-btn { display: none !important; }
+          .hf-admin-close-x { display: none !important; }
+          .hf-admin-overlay { display: none !important; }
+        }
+        .hf-admin-sidebar { transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes applePillIn {
+          from { opacity: 0; transform: translateY(-14px) scale(0.92); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .hf-admin-nav-item { min-height: 44px; }
+        .hf-admin-nav-item:hover { background: rgba(255,255,255,0.04) !important; }
+      `}</style>
     </div>
   );
 };
+
+// ─── NAV BUTTON ───────────────────────────────────────────────────────────────
+function NavBtn({ item, active, onClick, dev }: { item: NavItem; active: boolean; onClick: () => void; dev?: boolean }) {
+  return (
+    <button onClick={onClick} className="hf-admin-nav-item" style={{
+      display: "flex", alignItems: "center", gap: 10, width: "100%",
+      background: active ? `${dev ? "#FF3E3E" : ACCENT}12` : "none",
+      border: "none", padding: "10px 16px", cursor: "pointer",
+      borderLeft: active ? `3px solid ${dev ? "#FF3E3E" : ACCENT}` : "3px solid transparent",
+      color: active ? (dev ? "#FF3E3E" : ACCENT) : MUTED,
+      ...SF, fontSize: 13, fontWeight: active ? 600 : 400, textAlign: "left",
+      transition: "all 0.15s",
+    }}>
+      {item.icon}
+      {item.label}
+    </button>
+  );
+}
+
+// ─── PAGE ROUTER ──────────────────────────────────────────────────────────────
+interface PageProps {
+  page: PageId;
+  draft: AdminSiteData;
+  updateDraft: <K extends keyof AdminSiteData>(key: K, value: AdminSiteData[K]) => void;
+  showToast: (msg: string, type?: ToastType) => void;
+  onResetData: () => void;
+}
+
+function PageRouter({ page, draft, updateDraft, showToast, onResetData }: PageProps) {
+  switch (page) {
+    case "dashboard":  return <DashboardPage draft={draft} showToast={showToast} />;
+    case "homepage":   return <HomepagePage draft={draft} updateDraft={updateDraft} />;
+    case "pricing":    return <PricingPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
+    case "coaches":    return <CoachesPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
+    case "media":      return <MediaPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
+    case "offers":     return <OffersPage draft={draft} updateDraft={updateDraft} />;
+    case "blog":       return <BlogPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
+    case "contact":    return <ContactPage draft={draft} updateDraft={updateDraft} />;
+    case "admins":     return <AdminsPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
+    case "enquiries":  return <EnquiriesPage draft={draft} showToast={showToast} />;
+    case "developer":  return <DeveloperPage draft={draft} updateDraft={updateDraft} showToast={showToast} onResetData={onResetData} />;
+    default:           return <DashboardPage draft={draft} showToast={showToast} />;
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: DASHBOARD
+// ═════════════════════════════════════════════════════════════════════════════
+function DashboardPage({ draft, showToast }: { draft: AdminSiteData; showToast: (m: string, t?: ToastType) => void }) {
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
+  const [lastSync, setLastSync] = useState<string | null>(null);
+
+  const handlePush = async () => {
+    setSyncing(true);
+    setSyncStatus("idle");
+    try {
+      const ok = await pushToCloud(draft);
+      setSyncStatus(ok ? "success" : "error");
+      if (ok) {
+        setLastSync(new Date().toLocaleTimeString());
+        showToast("Pushed to cloud successfully!", "success");
+      } else showToast("Cloud push failed. Check Developer settings.", "error");
+    } catch { setSyncStatus("error"); showToast("Network error during push.", "error"); }
+    setSyncing(false);
+  };
+
+  const handlePull = async () => {
+    setSyncing(true);
+    try {
+      const data = await fetchCloudSiteData(draft.cloudDbEndpointUrl);
+      if (data) {
+        showToast("Pulled latest data from cloud!", "success");
+        setLastSync(new Date().toLocaleTimeString());
+      } else showToast("No cloud data found.", "info");
+    } catch { showToast("Pull failed.", "error"); }
+    setSyncing(false);
+  };
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="DASHBOARD" subtitle="Overview of your gym website and quick actions." />
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 28 }}>
+        <StatCard icon={<Users size={18} color={ACCENT} />} label="COACHES" value={draft.coaches?.length || 0} />
+        <StatCard icon={<DollarSign size={18} color="#3EFFD8" />} label="PRICING PLANS" value={draft.plans?.length || 0} color="#3EFFD8" />
+        <StatCard icon={<MessageSquare size={18} color="#A83EFF" />} label="ENQUIRIES" value={draft.enquiries?.length || 0} color="#A83EFF" />
+        <StatCard icon={<BookOpen size={18} color="#3E82FF" />} label="BLOG POSTS" value={draft.blogs?.length || 0} color="#3E82FF" />
+      </div>
+
+      {/* Cloud sync card */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14, marginBottom: 16 }}>
+          <div>
+            <div style={{ ...DF, fontSize: 16, letterSpacing: "0.06em" }}>☁️ CLOUD DATABASE SYNC</div>
+            <div style={{ ...SF, fontSize: 12, color: MUTED, marginTop: 4 }}>
+              {syncStatus === "success" ? `✅ Last synced: ${lastSync}` : syncStatus === "error" ? "❌ Last sync failed" : "Firebase Firestore + JSONBlob backup"}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Btn onClick={handlePull} variant="secondary" small disabled={syncing}>
+              <RefreshCw size={13} /> Pull Latest
+            </Btn>
+            <Btn onClick={handlePush} small disabled={syncing}>
+              <UploadCloud size={13} /> {syncing ? "Syncing…" : "Push to Cloud"}
+            </Btn>
+          </div>
+        </div>
+        <div style={{ background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, padding: "10px 14px", display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
+          <span style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.12em" }}>FIREBASE FIRESTORE ACTIVE</span>
+          <span style={{ ...SF, fontSize: 11, color: MUTED, marginLeft: 8 }}>JSONBlob fallback enabled</span>
+        </div>
+      </Card>
+
+      {/* Hero preview */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 12 }}>CURRENT HEADLINE</div>
+        <div style={{ ...DF, fontSize: 28, letterSpacing: "0.04em" }}>{draft?.tagline?.headlineMain || defaultSiteData.tagline.headlineMain}</div>
+        <div style={{ ...DF, fontSize: 28, color: ACCENT }}>{draft?.tagline?.headlineHighlight || defaultSiteData.tagline.headlineHighlight}</div>
+        <div style={{ ...SF, fontSize: 13, color: MUTED, marginTop: 8 }}>{draft?.tagline?.subtitle || defaultSiteData.tagline.subtitle}</div>
+      </Card>
+
+      {/* Offer status */}
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ ...MF, fontSize: 10, color: (draft?.offer?.enabled ?? true) ? ACCENT : MUTED, letterSpacing: "0.18em" }}>
+              {(draft?.offer?.enabled ?? true) ? "🔥 OFFER ACTIVE" : "OFFER INACTIVE"}
+            </div>
+            <div style={{ ...SF, fontSize: 13, color: TEXT, marginTop: 4 }}>{draft?.offer?.announcementText || defaultSiteData.offer.announcementText}</div>
+          </div>
+          <div style={{ ...DF, fontSize: 22, color: ACCENT }}>{(draft?.offer?.discountPercentage ?? 25) > 0 ? `${draft?.offer?.discountPercentage ?? 25}% OFF` : "No discount"}</div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: HOMEPAGE
+// ═════════════════════════════════════════════════════════════════════════════
+function HomepagePage({ draft, updateDraft }: { draft: AdminSiteData; updateDraft: any }) {
+  const t = { ...defaultSiteData.tagline, ...(draft?.tagline || {}) };
+  const setT = (k: string, v: any) => updateDraft("tagline", { ...t, [k]: v });
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="HOMEPAGE CONTENT" subtitle="Edit the hero section, headline, and key metrics." />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>HERO HEADLINE</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="MAIN HEADLINE LINE 1">
+              <Input value={t.headlineMain} onChange={v => setT("headlineMain", v)} placeholder="BUILD STRENGTH," />
+            </Field>
+            <Field label="HEADLINE HIGHLIGHT (ACCENT COLOR)">
+              <Input value={t.headlineHighlight} onChange={v => setT("headlineHighlight", v)} placeholder="CONQUER LIFE." />
+            </Field>
+            <Field label="SUBTITLE / TAGLINE">
+              <Input value={t.subtitle} onChange={v => setT("subtitle", v)} placeholder="Tagline text..." multiline rows={3} />
+            </Field>
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>HERO VIDEO</div>
+          <MediaUploader
+            label="HERO VIDEO FILE"
+            type="video"
+            value={t.heroVideoUrl || ""}
+            onChange={v => setT("heroVideoUrl", v)}
+            hint="Drag & drop hero video file or click to select from device"
+          />
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>HERO STATS (3 shown at bottom of hero)</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {(t.heroMetrics || defaultSiteData.tagline.heroMetrics!).map((m, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label={`METRIC ${i+1} VALUE`}>
+                  <Input value={m.value} onChange={v => {
+                    const ms = [...(t.heroMetrics || defaultSiteData.tagline.heroMetrics!)];
+                    ms[i] = { ...ms[i], value: v };
+                    updateDraft("tagline", { ...t, heroMetrics: ms });
+                  }} placeholder="250+" />
+                </Field>
+                <Field label="LABEL">
+                  <Input value={m.label} onChange={v => {
+                    const ms = [...(t.heroMetrics || defaultSiteData.tagline.heroMetrics!)];
+                    ms[i] = { ...ms[i], label: v };
+                    updateDraft("tagline", { ...t, heroMetrics: ms });
+                  }} placeholder="MEMBERS" />
+                </Field>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: PRICING
+// ═════════════════════════════════════════════════════════════════════════════
+function PricingPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [newPlan, setNewPlan] = useState(false);
+  const plans = draft.plans;
+
+  const emptyPlan = (): PricingPlan => ({
+    id: `plan-${Date.now()}`, name: "", price: 0, period: "PER MONTH",
+    badge: null, offerTag: "⚡ GET 25% OFF VIA WEBSITE", popular: false, features: [""],
+  });
+
+  const [form, setForm] = useState<PricingPlan>(emptyPlan());
+
+  const savePlan = () => {
+    if (!form.name.trim()) { showToast("Plan name is required.", "error"); return; }
+    const updated = editing !== null
+      ? plans.map((p, i) => i === editing ? form : p)
+      : [...plans, form];
+    updateDraft("plans", updated);
+    showToast(editing !== null ? "Plan updated!" : "Plan added!", "success");
+    setEditing(null); setNewPlan(false); setForm(emptyPlan());
+  };
+
+  const deletePlan = (i: number) => {
+    updateDraft("plans", plans.filter((_, idx) => idx !== i));
+    showToast("Plan deleted.", "info");
+  };
+
+  const startEdit = (i: number) => { setForm({ ...plans[i] }); setEditing(i); setNewPlan(true); };
+
+  if (newPlan) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={() => { setNewPlan(false); setEditing(null); setForm(emptyPlan()); }} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer" }}><ArrowLeft size={18} /></button>
+        <SectionHead title={editing !== null ? "EDIT PLAN" : "NEW PLAN"} subtitle="" />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 600 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>PLAN INFO</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="PLAN NAME"><Input value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="ELITE MENTOR" /></Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="PRICE (₹)"><Input value={String(form.price)} onChange={v => setForm(f => ({ ...f, price: Number(v) || 0 }))} type="number" /></Field>
+              <Field label="PERIOD"><Input value={form.period || ""} onChange={v => setForm(f => ({ ...f, period: v }))} placeholder="PER MONTH" /></Field>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="OFFER PRICE (₹)" hint="Leave 0 to auto-calculate 25% off">
+                <Input value={String(form.offerPrice || "")} onChange={v => setForm(f => ({ ...f, offerPrice: Number(v) || undefined }))} type="number" />
+              </Field>
+              <Field label="BADGE TEXT"><Input value={form.badge || ""} onChange={v => setForm(f => ({ ...f, badge: v || null }))} placeholder="MOST POPULAR" /></Field>
+            </div>
+            <Field label="OFFER TAG"><Input value={form.offerTag || ""} onChange={v => setForm(f => ({ ...f, offerTag: v }))} placeholder="⚡ GET 25% OFF VIA WEBSITE" /></Field>
+            <Toggle checked={form.popular} onChange={v => setForm(f => ({ ...f, popular: v }))} label="Mark as Most Popular plan" />
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em" }}>FEATURES LIST</div>
+            <Btn small variant="secondary" onClick={() => setForm(f => ({ ...f, features: [...f.features, ""] }))}>
+              <Plus size={12} /> Add Feature
+            </Btn>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {form.features.map((feat, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Input value={feat} onChange={v => { const fs = [...form.features]; fs[i] = v; setForm(f => ({ ...f, features: fs })); }} placeholder={`Feature ${i+1}`} />
+                <button onClick={() => setForm(f => ({ ...f, features: f.features.filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#FF3E3E", cursor: "pointer", padding: 4 }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={savePlan}><Check size={14} /> {editing !== null ? "Update Plan" : "Add Plan"}</Btn>
+          <Btn variant="secondary" onClick={() => { setNewPlan(false); setEditing(null); setForm(emptyPlan()); }}>Cancel</Btn>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <SectionHead title="PRICING & PLANS" subtitle={`${plans.length} plans configured`} />
+        <Btn onClick={() => { setForm(emptyPlan()); setEditing(null); setNewPlan(true); }}><Plus size={14} /> Add Plan</Btn>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+        {plans.map((plan, i) => (
+          <div key={plan.id} style={{ background: SURFACE, border: `1px solid ${plan.popular ? ACCENT + "40" : BORDER}`, borderRadius: 12, padding: "18px 20px", position: "relative" }}>
+            {plan.popular && <div style={{ ...MF, fontSize: 8, color: "#080808", background: ACCENT, padding: "3px 10px", borderRadius: 20, letterSpacing: "0.12em", position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap" }}>★ POPULAR</div>}
+            <div style={{ ...MF, fontSize: 10, color: plan.popular ? ACCENT : MUTED, letterSpacing: "0.15em", marginBottom: 8 }}>{plan.name}</div>
+            <div style={{ ...DF, fontSize: 28, color: plan.popular ? ACCENT : TEXT }}>₹{plan.price.toLocaleString()}</div>
+            <div style={{ ...SF, fontSize: 12, color: MUTED, marginBottom: 12 }}>{plan.period}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
+              {plan.features.slice(0, 4).map((f, fi) => (
+                <div key={fi} style={{ ...SF, fontSize: 12, color: MUTED, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                  <span style={{ color: ACCENT, fontSize: 10 }}>✓</span> {f}
+                </div>
+              ))}
+              {plan.features.length > 4 && <div style={{ ...SF, fontSize: 11, color: MUTED }}>+{plan.features.length - 4} more...</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn small variant="secondary" onClick={() => startEdit(i)}><Edit3 size={12} /> Edit</Btn>
+              <Btn small danger onClick={() => deletePlan(i)}><Trash2 size={12} /> Delete</Btn>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: COACHES
+// ═════════════════════════════════════════════════════════════════════════════
+function CoachesPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const coaches = draft.coaches || [];
+
+  const emptyCoach = (): CoachItem => ({
+    id: `coach-${Date.now()}`, name: "", role: "", bio: "", specialties: [], image: "",
+    instagram: "", stats: [], tag: "",
+  });
+
+  const [form, setForm] = useState<CoachItem>(emptyCoach());
+  const [showForm, setShowForm] = useState(false);
+
+  const saveCoach = () => {
+    if (!form.name.trim()) { showToast("Coach name is required.", "error"); return; }
+    const updated = editing !== null
+      ? coaches.map((c, i) => i === editing ? form : c)
+      : [...coaches, form];
+    updateDraft("coaches", updated);
+    showToast(editing !== null ? "Coach updated!" : "Coach added!", "success");
+    setEditing(null); setShowForm(false); setForm(emptyCoach());
+  };
+
+  const deleteCoach = (i: number) => {
+    updateDraft("coaches", coaches.filter((_, idx) => idx !== i));
+    showToast("Coach removed.", "info");
+  };
+
+  if (showForm) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={() => { setShowForm(false); setEditing(null); }} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer" }}><ArrowLeft size={18} /></button>
+        <SectionHead title={editing !== null ? "EDIT COACH" : "ADD COACH"} subtitle="" />
+      </div>
+      <div style={{ maxWidth: 600, display: "flex", flexDirection: "column", gap: 16 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>PROFILE</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="FULL NAME"><Input value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} /></Field>
+              <Field label="ROLE / TITLE"><Input value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))} placeholder="HEAD COACH" /></Field>
+            </div>
+            <Field label="BIO"><Input value={form.bio} onChange={v => setForm(f => ({ ...f, bio: v }))} multiline rows={3} /></Field>
+            <MediaUploader
+              label="COACH PROFILE PHOTO"
+              type="image"
+              value={form.image}
+              onChange={v => setForm(f => ({ ...f, image: v }))}
+              hint="Drag & drop profile photo or click to choose image from device"
+            />
+            <Field label="INSTAGRAM HANDLE"><Input value={form.instagram || ""} onChange={v => setForm(f => ({ ...f, instagram: v }))} placeholder="@handle" /></Field>
+            <Field label="TAG (BADGE)"><Input value={form.tag || ""} onChange={v => setForm(f => ({ ...f, tag: v }))} placeholder="BODYBUILDING CHAMPION" /></Field>
+          </div>
+        </Card>
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em" }}>SPECIALTIES</div>
+            <Btn small variant="secondary" onClick={() => setForm(f => ({ ...f, specialties: [...(f.specialties || []), ""] }))}>+ Add</Btn>
+          </div>
+          {(form.specialties || []).map((s, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <Input value={s} onChange={v => { const ss = [...(form.specialties || [])]; ss[i] = v; setForm(f => ({ ...f, specialties: ss })); }} placeholder="e.g. Powerlifting" />
+              <button onClick={() => setForm(f => ({ ...f, specialties: (f.specialties || []).filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#FF3E3E", cursor: "pointer" }}><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </Card>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={saveCoach}><Check size={14} /> {editing !== null ? "Update Coach" : "Add Coach"}</Btn>
+          <Btn variant="secondary" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</Btn>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <SectionHead title="COACHES" subtitle={`${coaches.length} coaches on roster`} />
+        <Btn onClick={() => { setForm(emptyCoach()); setEditing(null); setShowForm(true); }}><Plus size={14} /> Add Coach</Btn>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {coaches.map((coach, i) => (
+          <div key={coach.id} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            {coach.image && <img src={coach.image} alt={coach.name} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: `2px solid ${BORDER}` }} />}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...DF, fontSize: 16, letterSpacing: "0.06em" }}>{coach.name}</div>
+              <div style={{ ...MF, fontSize: 9, color: ACCENT, letterSpacing: "0.15em", marginTop: 2 }}>{coach.role}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <Btn small variant="secondary" onClick={() => { setForm({ ...coach }); setEditing(i); setShowForm(true); }}><Edit3 size={12} /> Edit</Btn>
+              <Btn small danger onClick={() => deleteCoach(i)}><Trash2 size={12} /></Btn>
+            </div>
+          </div>
+        ))}
+        {coaches.length === 0 && <Card><div style={{ ...SF, fontSize: 14, color: MUTED, textAlign: "center", padding: "20px 0" }}>No coaches added yet.</div></Card>}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: MEDIA
+// ═════════════════════════════════════════════════════════════════════════════
+function MediaPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const founder = { ...defaultSiteData.founder, ...(draft?.founder || {}) };
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="MEDIA & GALLERY" subtitle="Manage founder story media and before/after images." />
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>FOUNDER STORY MEDIA</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {["image", "video"].map(t => (
+                <button key={t} onClick={() => updateDraft("founder", { ...founder, mediaType: t as "image" | "video" })}
+                  style={{ padding: "8px 18px", borderRadius: 8, border: `1px solid ${founder.mediaType === t ? ACCENT : BORDER}`, background: founder.mediaType === t ? `${ACCENT}15` : SURFACE2, color: founder.mediaType === t ? ACCENT : MUTED, ...SF, fontSize: 13, cursor: "pointer" }}>
+                  {t === "image" ? "📷 Image" : "🎬 Video"}
+                </button>
+              ))}
+            </div>
+            {founder.mediaType === "video"
+              ? <MediaUploader label="FOUNDER VIDEO FILE" type="video" value={founder.videoUrl || ""} onChange={v => updateDraft("founder", { ...founder, videoUrl: v })} hint="Drag & drop video or click to select file" />
+              : <MediaUploader label="FOUNDER IMAGE FILE" type="image" value={founder.image || ""} onChange={v => updateDraft("founder", { ...founder, image: v })} hint="Drag & drop photo or click to select file" />
+            }
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>BEFORE / AFTER TRANSFORMATION</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <MediaUploader
+              label="BEFORE IMAGE"
+              type="image"
+              value={founder.beforeImage || ""}
+              onChange={v => updateDraft("founder", { ...founder, beforeImage: v })}
+              hint="Drag & drop before photo"
+            />
+            <MediaUploader
+              label="AFTER IMAGE"
+              type="image"
+              value={founder.afterImage || ""}
+              onChange={v => updateDraft("founder", { ...founder, afterImage: v })}
+              hint="Drag & drop after photo"
+            />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+            {[{ url: founder.beforeImage, label: "BEFORE" }, { url: founder.afterImage, label: "AFTER" }].map(({ url, label }) => (
+              url ? (
+                <div key={label} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${BORDER}`, position: "relative" }}>
+                  <img src={url} alt={label} style={{ width: "100%", height: 180, objectFit: "cover", objectPosition: "top", display: "block" }} />
+                  <div style={{ position: "absolute", top: 8, left: 8, ...MF, fontSize: 8, background: label === "AFTER" ? ACCENT : "rgba(8,8,8,0.85)", color: label === "AFTER" ? "#080808" : "#fff", padding: "3px 9px", borderRadius: 4, letterSpacing: "0.15em" }}>{label}</div>
+                </div>
+              ) : <div key={label} style={{ height: 180, borderRadius: 8, border: `1px dashed ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, ...SF, fontSize: 12 }}>No {label} image</div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>FOUNDER QUOTE</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Field label="QUOTE TEXT">
+              <Input value={founder.quote || ""} onChange={v => updateDraft("founder", { ...founder, quote: v })} multiline rows={3} />
+            </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="QUOTE AUTHOR"><Input value={founder.quoteAuthor || ""} onChange={v => updateDraft("founder", { ...founder, quoteAuthor: v })} /></Field>
+              <Field label="AUTHOR SUBTEXT"><Input value={founder.quoteSubtext || ""} onChange={v => updateDraft("founder", { ...founder, quoteSubtext: v })} /></Field>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: OFFERS
+// ═════════════════════════════════════════════════════════════════════════════
+function OffersPage({ draft, updateDraft }: { draft: AdminSiteData; updateDraft: any }) {
+  const offer = { ...defaultSiteData.offer, ...(draft?.offer || {}) };
+  const setO = (k: string, v: any) => updateDraft("offer", { ...offer, [k]: v });
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="OFFERS & DEALS" subtitle="Control the announcement banner shown to visitors." />
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <Card>
+          <Toggle checked={offer.enabled} onChange={v => setO("enabled", v)} label="Show offer banner to visitors" />
+        </Card>
+
+        {offer.enabled && (
+          <>
+            <Card>
+              <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>BANNER CONTENT</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <Field label="BADGE TEXT (e.g. SPECIAL OFFER)">
+                  <Input value={offer.badgeText || ""} onChange={v => setO("badgeText", v)} />
+                </Field>
+                <Field label="ANNOUNCEMENT TEXT">
+                  <Input value={offer.announcementText} onChange={v => setO("announcementText", v)} multiline rows={2} />
+                </Field>
+                <Field label="DISCOUNT PERCENTAGE (0 = no %)">
+                  <Input value={String(offer.discountPercentage)} onChange={v => setO("discountPercentage", Number(v) || 0)} type="number" />
+                </Field>
+              </div>
+            </Card>
+
+            <Card style={{ border: `1px solid ${ACCENT}30` }}>
+              <div style={{ ...MF, fontSize: 10, color: MUTED, letterSpacing: "0.12em", marginBottom: 12 }}>PREVIEW</div>
+              <div style={{ background: "linear-gradient(135deg, rgba(216,255,62,0.12), rgba(13,13,16,0.95))", border: `2px solid ${ACCENT}`, borderRadius: 10, padding: "16px 20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ ...MF, fontSize: 9, background: ACCENT, color: "#080808", padding: "3px 8px", borderRadius: 4, letterSpacing: "0.1em", fontWeight: 800 }}>🔥 {offer.badgeText}</span>
+                  {offer.discountPercentage > 0 && <span style={{ ...MF, fontSize: 10, color: ACCENT, fontWeight: 700 }}>{offer.discountPercentage}% OFF</span>}
+                </div>
+                <div style={{ ...SF, fontSize: 14, color: TEXT, fontWeight: 600 }}>{offer.announcementText}</div>
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: BLOG
+// ═════════════════════════════════════════════════════════════════════════════
+function BlogPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const blogs = draft.blogs || [];
+
+  const emptyBlog = (): BlogPost => ({ id: `blog-${Date.now()}`, title: "", subtitle: "", category: "", author: "", date: "", content: "" });
+  const [form, setForm] = useState<BlogPost>(emptyBlog());
+
+  const saveBlog = () => {
+    if (!form.title.trim()) { showToast("Title is required.", "error"); return; }
+    const updated = editing !== null ? blogs.map((b, i) => i === editing ? form : b) : [...blogs, form];
+    updateDraft("blogs", updated);
+    showToast("Blog saved!", "success");
+    setEditing(null); setShowForm(false); setForm(emptyBlog());
+  };
+
+  if (showForm) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={() => { setShowForm(false); setEditing(null); }} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer" }}><ArrowLeft size={18} /></button>
+        <SectionHead title={editing !== null ? "EDIT ARTICLE" : "NEW ARTICLE"} subtitle="" />
+      </div>
+      <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 16 }}>
+        <Card>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Field label="ARTICLE TITLE"><Input value={form.title} onChange={v => setForm(f => ({ ...f, title: v }))} /></Field>
+            <Field label="SUBTITLE / DESCRIPTION"><Input value={form.subtitle || ""} onChange={v => setForm(f => ({ ...f, subtitle: v }))} /></Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="CATEGORY"><Input value={form.category || ""} onChange={v => setForm(f => ({ ...f, category: v }))} placeholder="NUTRITION" /></Field>
+              <Field label="AUTHOR"><Input value={form.author || ""} onChange={v => setForm(f => ({ ...f, author: v }))} /></Field>
+            </div>
+            <Field label="DATE"><Input value={form.date || ""} onChange={v => setForm(f => ({ ...f, date: v }))} placeholder="January 2025" /></Field>
+            <Field label="FULL CONTENT (Markdown or plain text)">
+              <Input value={form.content} onChange={v => setForm(f => ({ ...f, content: v }))} multiline rows={10} />
+            </Field>
+          </div>
+        </Card>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={saveBlog}><Check size={14} /> {editing !== null ? "Update" : "Publish"}</Btn>
+          <Btn variant="secondary" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</Btn>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <SectionHead title="ARTICLES & BLOG" subtitle={`${blogs.length} articles published`} />
+        <Btn onClick={() => { setForm(emptyBlog()); setEditing(null); setShowForm(true); }}><Plus size={14} /> New Article</Btn>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {blogs.map((b, i) => (
+          <div key={b.id} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...SF, fontSize: 14, fontWeight: 600, color: TEXT }}>{b.title}</div>
+              {b.category && <div style={{ ...MF, fontSize: 9, color: ACCENT, letterSpacing: "0.12em", marginTop: 3 }}>{b.category}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <Btn small variant="secondary" onClick={() => { setForm({ ...b }); setEditing(i); setShowForm(true); }}><Edit3 size={12} /></Btn>
+              <Btn small danger onClick={() => { updateDraft("blogs", blogs.filter((_, idx) => idx !== i)); showToast("Article deleted.", "info"); }}><Trash2 size={12} /></Btn>
+            </div>
+          </div>
+        ))}
+        {blogs.length === 0 && <Card><div style={{ ...SF, fontSize: 14, color: MUTED, textAlign: "center", padding: "20px 0" }}>No articles published yet.</div></Card>}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: CONTACT
+// ═════════════════════════════════════════════════════════════════════════════
+function ContactPage({ draft, updateDraft }: { draft: AdminSiteData; updateDraft: any }) {
+  const policies = draft.policies || defaultSiteData.policies;
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="CONTACT INFO" subtitle="Business details shown on website." />
+      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 680 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>ADMIN USERS</div>
+          {(draft.admins || []).map((admin, i) => (
+            <div key={admin.id} style={{ background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ ...SF, fontSize: 13, color: TEXT }}>{admin.email}</div>
+                <div style={{ ...MF, fontSize: 9, color: MUTED, letterSpacing: "0.12em", marginTop: 2 }}>{admin.role}</div>
+              </div>
+              {draft.admins.length > 1 && (
+                <button onClick={() => updateDraft("admins", draft.admins.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "#FF3E3E", cursor: "pointer" }}>
+                  <UserX size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>LEGAL POLICIES</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Field label="PRIVACY POLICY">
+              <Input value={policies.privacyPolicy || ""} onChange={v => updateDraft("policies", { ...policies, privacyPolicy: v })} multiline rows={6} />
+            </Field>
+            <Field label="TERMS & CONDITIONS">
+              <Input value={policies.termsAndConditions || ""} onChange={v => updateDraft("policies", { ...policies, termsAndConditions: v })} multiline rows={6} />
+            </Field>
+            <Field label="REFUND POLICY">
+              <Input value={policies.refundPolicy || ""} onChange={v => updateDraft("policies", { ...policies, refundPolicy: v })} multiline rows={4} />
+            </Field>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: ENQUIRIES CRM
+// ═════════════════════════════════════════════════════════════════════════════
+function EnquiriesPage({ draft, showToast }: { draft: AdminSiteData; showToast: any }) {
+  const enquiries: EnquiryLead[] = draft.enquiries || [];
+  const [filter, setFilter] = useState("");
+
+  const filtered = enquiries.filter(e =>
+    !filter || e.name.toLowerCase().includes(filter.toLowerCase()) || e.phone.includes(filter)
+  );
+
+  const copyToCSV = () => {
+    const csv = ["Name,Phone,Email,Goal,Coach,Plan,Date", ...enquiries.map(e =>
+      `"${e.name}","${e.phone}","${e.email || ""}","${e.goal}","${e.preferredCoach || ""}","${e.planName || ""}","${e.submittedAt}"`
+    )].join("\n");
+    navigator.clipboard.writeText(csv);
+    showToast("Copied as CSV!", "success");
+  };
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <SectionHead title="ENQUIRIES CRM" subtitle={`${enquiries.length} leads captured`} />
+        <Btn small variant="secondary" onClick={copyToCSV}><Copy size={13} /> Export CSV</Btn>
+      </div>
+
+      {enquiries.length === 0 ? (
+        <Card><div style={{ ...SF, fontSize: 14, color: MUTED, textAlign: "center", padding: "32px 0" }}>No enquiries yet. When visitors submit the consultation form, leads appear here.</div></Card>
+      ) : (
+        <>
+          <div style={{ marginBottom: 14 }}>
+            <Input value={filter} onChange={setFilter} placeholder="Search by name or phone..." />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {filtered.map((e, i) => (
+              <div key={e.id || i} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ ...DF, fontSize: 16, letterSpacing: "0.04em" }}>{e.name}</div>
+                    <div style={{ ...SF, fontSize: 12, color: MUTED, marginTop: 3 }}>
+                      📞 {e.phone} {e.email && `· ✉️ ${e.email}`}
+                    </div>
+                  </div>
+                  <div style={{ ...MF, fontSize: 9, color: MUTED, letterSpacing: "0.1em" }}>
+                    {new Date(e.submittedAt).toLocaleDateString("en-IN")}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {e.goal && <span style={{ ...MF, fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}30`, padding: "3px 8px", borderRadius: 20, letterSpacing: "0.1em" }}>{e.goal}</span>}
+                  {e.planName && <span style={{ ...MF, fontSize: 9, color: "#3EFFD8", border: "1px solid rgba(62,255,216,0.3)", padding: "3px 8px", borderRadius: 20, letterSpacing: "0.1em" }}>{e.planName}</span>}
+                  {e.preferredCoach && <span style={{ ...MF, fontSize: 9, color: MUTED, border: `1px solid ${BORDER}`, padding: "3px 8px", borderRadius: 20, letterSpacing: "0.1em" }}>Coach: {e.preferredCoach}</span>}
+                </div>
+                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <a href={`https://wa.me/91${e.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.25)", color: "#25D366", padding: "6px 12px", borderRadius: 6, textDecoration: "none", ...SF, fontSize: 12, fontWeight: 600 }}>
+                    <MessageSquare size={12} /> WhatsApp
+                  </a>
+                  <a href={`tel:${e.phone}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: SURFACE2, border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 12px", borderRadius: 6, textDecoration: "none", ...SF, fontSize: 12 }}>
+                    <Phone size={12} /> Call
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: DEVELOPER SETTINGS
+// ═════════════════════════════════════════════════════════════════════════════
+function DeveloperPage({ draft, updateDraft, showToast, onResetData }: { draft: AdminSiteData; updateDraft: any; showToast: any; onResetData: () => void }) {
+  const [syncing, setSyncing] = useState(false);
+  const [fbConfig, setFbConfig] = useState<FirebaseConfig>(loadFirebaseConfig());
+  const [fbStatus, setFbStatus] = useState<"idle" | "success" | "error">("idle");
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  const handleSaveFbConfig = () => {
+    saveFirebaseConfig(fbConfig);
+    showToast("Firebase configuration saved!", "success");
+  };
+
+  const testFirebase = async () => {
+    if (!fbConfig.projectId || !fbConfig.apiKey) {
+      showToast("Please enter Firebase Project ID and API Key first.", "info");
+      return;
+    }
+    setSyncing(true);
+    setFbStatus("idle");
+    try {
+      saveFirebaseConfig(fbConfig);
+      const ok = await pushToFirebase(draft, fbConfig);
+      setFbStatus(ok ? "success" : "error");
+      showToast(ok ? "Firebase Firestore push successful!" : "Firebase push failed. Check credentials or Firestore rules.", ok ? "success" : "error");
+    } catch {
+      setFbStatus("error");
+      showToast("Firebase connection error.", "error");
+    }
+    setSyncing(false);
+  };
+
+  const handlePullFirebase = async () => {
+    if (!fbConfig.projectId || !fbConfig.apiKey) {
+      showToast("Please enter Firebase Project ID and API Key first.", "info");
+      return;
+    }
+    setSyncing(true);
+    try {
+      saveFirebaseConfig(fbConfig);
+      const data = await fetchFirebaseSiteData(fbConfig);
+      if (data) showToast("Pulled data from Firebase Firestore!", "success");
+      else showToast("No data in Firebase Firestore yet or access denied.", "info");
+    } catch { showToast("Pull from Firebase failed.", "error"); }
+    setSyncing(false);
+  };
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ border: "1px solid rgba(255,193,7,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 24, display: "flex", gap: 12, alignItems: "center", background: "rgba(255,193,7,0.05)" }}>
+        <AlertTriangle size={18} color="#FFC107" />
+        <span style={{ ...SF, fontSize: 13, color: "#FFE082" }}>Developer zone — changes here update Firebase database credentials and live cloud sync.</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Firebase Firestore */}
+        <Card style={{ border: "1px solid rgba(255,193,7,0.25)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+            <Database size={16} color="#FFC107" />
+            <div style={{ ...DF, fontSize: 16, letterSpacing: "0.06em", color: "#FFC107" }}>FIREBASE FIRESTORE DATABASE</div>
+            <div style={{ marginLeft: "auto", ...MF, fontSize: 9, padding: "3px 9px", borderRadius: 20, background: fbStatus === "success" ? "rgba(216,255,62,0.15)" : fbStatus === "error" ? "rgba(255,62,62,0.15)" : SURFACE2, color: fbStatus === "success" ? ACCENT : fbStatus === "error" ? "#FF3E3E" : MUTED, border: `1px solid ${fbStatus === "success" ? ACCENT + "40" : fbStatus === "error" ? "#FF3E3E40" : BORDER}`, letterSpacing: "0.1em" }}>
+              {fbStatus === "success" ? "✅ CONNECTED" : fbStatus === "error" ? "❌ FAILED" : fbConfig.projectId ? "⬤ READY TO CONNECT" : "⚠️ NEED CONFIG"}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+            <Field label="FIREBASE PROJECT ID" hint="Your Google Firebase Project ID (e.g. hercules-fitness-app)">
+              <Input value={fbConfig.projectId} onChange={v => setFbConfig(c => ({ ...c, projectId: v }))} placeholder="hercules-fitness-app" />
+            </Field>
+
+            <Field label="FIREBASE API KEY" hint="Web API Key from Firebase Project Settings">
+              <div style={{ display: "flex", gap: 8 }}>
+                <Input value={showKey ? fbConfig.apiKey : fbConfig.apiKey ? "••••••••••••••••••••••••" : ""} onChange={v => setFbConfig(c => ({ ...c, apiKey: v }))} type={showKey ? "text" : "password"} placeholder="AIzaSy..." />
+                <button onClick={() => setShowKey(s => !s)} style={{ background: SURFACE2, border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: "0 12px", cursor: "pointer" }}>
+                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </Field>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="AUTH DOMAIN (OPTIONAL)">
+                <Input value={fbConfig.authDomain} onChange={v => setFbConfig(c => ({ ...c, authDomain: v }))} placeholder="hercules-fitness.firebaseapp.com" />
+              </Field>
+              <Field label="STORAGE BUCKET (OPTIONAL)">
+                <Input value={fbConfig.storageBucket} onChange={v => setFbConfig(c => ({ ...c, storageBucket: v }))} placeholder="hercules-fitness.appspot.com" />
+              </Field>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="FIRESTORE COLLECTION">
+                <Input value={fbConfig.firestoreCollection || "site_data"} onChange={v => setFbConfig(c => ({ ...c, firestoreCollection: v }))} placeholder="site_data" />
+              </Field>
+              <Field label="FIRESTORE DOCUMENT ID">
+                <Input value={fbConfig.firestoreDocumentId || "global_config"} onChange={v => setFbConfig(c => ({ ...c, firestoreDocumentId: v }))} placeholder="global_config" />
+              </Field>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+            <Btn small onClick={handleSaveFbConfig} variant="secondary"><Save size={12} /> Save Config</Btn>
+            <Btn small onClick={testFirebase} disabled={syncing}><Send size={12} /> {syncing ? "Testing…" : "Push to Firebase"}</Btn>
+            <Btn small variant="secondary" onClick={handlePullFirebase} disabled={syncing}><Download size={12} /> Pull from Firebase</Btn>
+          </div>
+        </Card>
+
+        {/* JSONBlob backup */}
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 14 }}>☁️ JSONBLOB BACKUP DATABASE</div>
+          <Field label="CLOUD DATABASE ENDPOINT URL" hint="This is the fallback if Firebase is unavailable.">
+            <Input value={draft.cloudDbEndpointUrl || DEFAULT_CLOUD_DB_URL} onChange={v => updateDraft("cloudDbEndpointUrl", v)} />
+          </Field>
+          <div style={{ marginTop: 10 }}>
+            <Btn small variant="secondary" onClick={async () => {
+              setSyncing(true);
+              const ok = await pushToCloud(draft, draft.cloudDbEndpointUrl);
+              showToast(ok ? "Pushed to JSONBlob!" : "JSONBlob push failed.", ok ? "success" : "error");
+              setSyncing(false);
+            }} disabled={syncing}>
+              <UploadCloud size={12} /> Push to JSONBlob
+            </Btn>
+          </div>
+        </Card>
+
+        {/* Google Sheets Webhook */}
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 14 }}>📊 GOOGLE SHEETS WEBHOOK</div>
+          <Field label="WEBHOOK URL (from Google Apps Script)" hint="Enquiries are sent here when a lead is captured.">
+            <Input value={draft.googleSheetWebhookUrl || ""} onChange={v => updateDraft("googleSheetWebhookUrl", v)} placeholder="https://script.google.com/macros/..." />
+          </Field>
+        </Card>
+
+        {/* Reset */}
+        <Card style={{ border: "1px solid rgba(255,62,62,0.25)" }}>
+          <div style={{ ...MF, fontSize: 10, color: "#FF3E3E", letterSpacing: "0.18em", marginBottom: 14 }}>⚠️ DANGER ZONE</div>
+          {!confirmReset ? (
+            <Btn danger onClick={() => setConfirmReset(true)}><AlertTriangle size={13} /> Reset All Site Data to Defaults</Btn>
+          ) : (
+            <div>
+              <div style={{ ...SF, fontSize: 13, color: "#FF7777", marginBottom: 14 }}>This will reset ALL content (plans, coaches, blogs, settings) to factory defaults. Are you absolutely sure?</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn danger onClick={() => { onResetData(); showToast("Site data reset to defaults.", "info"); setConfirmReset(false); }}>
+                  <Check size={13} /> Yes, Reset Everything
+                </Btn>
+                <Btn variant="secondary" onClick={() => setConfirmReset(false)}>Cancel</Btn>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: ADMINS MANAGEMENT
+// ═════════════════════════════════════════════════════════════════════════════
+function AdminsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const admins: AdminUser[] = draft.admins || [];
+  const [showAdd, setShowAdd] = useState(false);
+  const [showPwd, setShowPwd] = useState<Record<string, boolean>>({});
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState("admin");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const addAdmin = () => {
+    if (!newEmail.trim()) { showToast("Email is required.", "error"); return; }
+    if (!newPassword.trim() || newPassword.length < 6) { showToast("Password must be at least 6 characters.", "error"); return; }
+    if (admins.find(a => a.email.toLowerCase() === newEmail.toLowerCase())) {
+      showToast("An admin with that email already exists.", "error"); return;
+    }
+    const newAdmin: AdminUser = {
+      id: `admin-${Date.now()}`,
+      email: newEmail.trim().toLowerCase(),
+      password: newPassword,
+      role: newRole,
+      addedAt: new Date().toISOString(),
+    };
+    updateDraft("admins", [...admins, newAdmin]);
+    showToast(`Admin ${newEmail} added!`, "success");
+    setNewEmail(""); setNewPassword(""); setNewRole("admin"); setShowAdd(false);
+  };
+
+  const removeAdmin = (id: string) => {
+    if (admins.length <= 1) { showToast("Cannot remove the last admin account.", "error"); return; }
+    updateDraft("admins", admins.filter(a => a.id !== id));
+    showToast("Admin removed.", "info");
+    setConfirmDelete(null);
+  };
+
+  const roleColors: Record<string, string> = {
+    "super-admin": "#A83EFF",
+    "admin": ACCENT,
+    "editor": "#3EFFD8",
+    "viewer": MUTED,
+  };
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SectionHead title="ADMINS" subtitle="Manage who can access the admin panel." />
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+        <StatCard icon={<Shield size={16} color={ACCENT} />} label="TOTAL ADMINS" value={admins.length} />
+        <StatCard icon={<ShieldCheck size={16} color="#A83EFF" />} label="SUPER ADMINS" value={admins.filter(a => a.role === "super-admin").length} color="#A83EFF" />
+        <StatCard icon={<Users size={16} color="#3EFFD8" />} label="EDITORS" value={admins.filter(a => a.role === "editor").length} color="#3EFFD8" />
+      </div>
+
+      {/* Add Admin button */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <Btn onClick={() => setShowAdd(s => !s)}>
+          <UserPlus size={14} /> {showAdd ? "Cancel" : "Add New Admin"}
+        </Btn>
+      </div>
+
+      {/* Add Admin form */}
+      {showAdd && (
+        <Card style={{ marginBottom: 20, border: `1px solid ${ACCENT}30` }}>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>NEW ADMIN DETAILS</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="EMAIL ADDRESS">
+                <Input value={newEmail} onChange={setNewEmail} placeholder="name@example.com" type="email" />
+              </Field>
+              <Field label="ROLE">
+                <select
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value)}
+                  style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, padding: "11px 14px", borderRadius: 8, ...SF, fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", cursor: "pointer" }}
+                >
+                  <option value="super-admin">Super Admin</option>
+                  <option value="admin">Admin</option>
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="PASSWORD" hint="Minimum 6 characters">
+              <Input value={newPassword} onChange={setNewPassword} type="password" placeholder="Set a secure password" />
+            </Field>
+
+            <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
+              <Btn onClick={addAdmin}><UserPlus size={13} /> Add Admin</Btn>
+              <Btn variant="secondary" onClick={() => { setShowAdd(false); setNewEmail(""); setNewPassword(""); }}>Cancel</Btn>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Admins list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {admins.map((admin, i) => (
+          <div key={admin.id} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px 20px", transition: "border-color 0.2s" }}>
+            {confirmDelete === admin.id ? (
+              /* Confirm delete state */
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ ...SF, fontSize: 13, color: "#FF7777" }}>
+                  Remove <strong>{admin.email}</strong>? This cannot be undone.
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn small danger onClick={() => removeAdmin(admin.id)}><Check size={12} /> Yes, Remove</Btn>
+                  <Btn small variant="secondary" onClick={() => setConfirmDelete(null)}>Cancel</Btn>
+                </div>
+              </div>
+            ) : (
+              /* Normal state */
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                {/* Avatar */}
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${roleColors[admin.role] || ACCENT}18`, border: `2px solid ${roleColors[admin.role] || ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Shield size={16} color={roleColors[admin.role] || ACCENT} />
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...SF, fontSize: 14, fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{admin.email}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <span style={{
+                      ...MF, fontSize: 8.5, letterSpacing: "0.14em",
+                      color: roleColors[admin.role] || ACCENT,
+                      background: `${roleColors[admin.role] || ACCENT}15`,
+                      border: `1px solid ${roleColors[admin.role] || ACCENT}35`,
+                      padding: "2px 8px", borderRadius: 20,
+                    }}>{admin.role.toUpperCase()}</span>
+                    {admin.addedAt && (
+                      <span style={{ ...SF, fontSize: 11, color: MUTED }}>
+                        Added {new Date(admin.addedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password reveal */}
+                <button
+                  onClick={() => setShowPwd(s => ({ ...s, [admin.id]: !s[admin.id] }))}
+                  title={showPwd[admin.id] ? "Hide password" : "Show password"}
+                  style={{ background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 12px", color: MUTED, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, ...SF, fontSize: 12 }}
+                >
+                  {showPwd[admin.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {showPwd[admin.id] ? <span style={{ ...MF, fontSize: 11, color: TEXT, letterSpacing: "0.08em" }}>{admin.password}</span> : <span>Password</span>}
+                </button>
+
+                {/* Remove button — disabled for last admin */}
+                <button
+                  onClick={() => setConfirmDelete(admin.id)}
+                  disabled={admins.length <= 1}
+                  title={admins.length <= 1 ? "Cannot remove the last admin" : "Remove admin"}
+                  style={{ background: admins.length <= 1 ? "transparent" : "rgba(255,62,62,0.08)", border: `1px solid ${admins.length <= 1 ? BORDER : "rgba(255,62,62,0.25)"}`, borderRadius: 8, padding: "7px 10px", color: admins.length <= 1 ? MUTED : "#FF3E3E", cursor: admins.length <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", opacity: admins.length <= 1 ? 0.4 : 1 }}
+                >
+                  <UserX size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Help note */}
+      <div style={{ marginTop: 20, background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 10, padding: "14px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <ShieldCheck size={16} color={ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ ...SF, fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
+          <strong style={{ color: TEXT }}>Role permissions:</strong> Super Admin has full access including Developer settings.
+          Admin can edit all content. Editor can change text and media. Viewer can only view data.
+          <br />Changes are saved when you click <strong style={{ color: ACCENT }}>Save Changes</strong> at the top.
+        </div>
+      </div>
+    </div>
+  );
+}

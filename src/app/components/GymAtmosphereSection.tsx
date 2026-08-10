@@ -108,65 +108,25 @@ export const GymAtmosphereSection: React.FC = () => {
         {/* Section Header */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            marginBottom: "3.5rem",
-            flexWrap: "wrap",
-            gap: "2rem",
+            textAlign: "center",
+            maxWidth: 800,
+            margin: "0 auto 3.5rem",
           }}
         >
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: "0.75rem",
-              }}
-            >
-              <div style={{ width: 28, height: 2, background: LIME }} />
-              <span
-                style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: LIME,
-                  letterSpacing: "0.25em",
-                  textTransform: "uppercase",
-                }}
-              >
-                THE ATHLETIC SANCTUARY
-              </span>
-            </div>
-
-            <h2
-              style={{
-                fontFamily: '"Big Shoulders Display", Impact, sans-serif',
-                fontWeight: 900,
-                fontSize: "clamp(2.5rem, 5.5vw, 4.8rem)",
-                textTransform: "uppercase",
-                lineHeight: 0.92,
-                color: "#FFFFFF",
-                letterSpacing: "0.02em",
-              }}
-            >
-              THE ATHLETE&apos;S <span style={{ color: LIME }}>HAVEN</span>
-            </h2>
-          </div>
-
-          <div style={{ maxWidth: 460 }}>
-            <p
-              style={{
-                fontFamily: '"DM Sans", sans-serif',
-                color: "#A1A1AA",
-                fontSize: 14.5,
-                lineHeight: 1.65,
-              }}
-            >
-              Built out of passion by a 19-year heavyweight champion. Every platform, squat rack, and movement zone is engineered for focus, discipline, and long-term athletic transformation.
-            </p>
-          </div>
+          <h2
+            style={{
+              fontFamily: '"Big Shoulders Display", Impact, sans-serif',
+              fontWeight: 900,
+              fontSize: "clamp(2.5rem, 5.5vw, 4.8rem)",
+              textTransform: "uppercase",
+              lineHeight: 0.92,
+              color: "#FFFFFF",
+              letterSpacing: "0.02em",
+              margin: 0,
+            }}
+          >
+            THE ATHLETE&apos;S <span style={{ color: LIME }}>HAVEN</span>
+          </h2>
         </div>
 
         {/* 2-Column Split: Left 9:16 Vertical Video Reel + Right Photo Portfolio */}
@@ -246,17 +206,6 @@ export const GymAtmosphereSection: React.FC = () => {
                 >
                   GYM ATMOSPHERE
                 </div>
-                <div
-                  style={{
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 10,
-                    color: LIME,
-                    marginTop: 4,
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  WALKTHROUGH TOUR
-                </div>
               </div>
             </motion.div>
           </div>
@@ -312,27 +261,6 @@ export const GymAtmosphereSection: React.FC = () => {
                         "linear-gradient(to top, rgba(10,10,12,0.92) 0%, transparent 60%)",
                     }}
                   />
-
-                  {/* Top Tag Pill */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 14,
-                      left: 14,
-                      background: "rgba(10, 10, 12, 0.8)",
-                      backdropFilter: "blur(8px)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      color: LIME,
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 9,
-                      fontWeight: 700,
-                      padding: "4px 10px",
-                      borderRadius: 14,
-                      letterSpacing: "0.1em",
-                    }}
-                  >
-                    {photo.category}
-                  </div>
 
                   {/* Expand Icon */}
                   <div

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Award, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, ChevronRight, ShieldCheck } from "lucide-react";
 import { LearnMoreModal, ModalContent } from "./LearnMoreModal";
+import { CertificateModal, CertificateData } from "./CertificateModal";
 
 const LIME = "#D8FF3E";
 
@@ -70,9 +71,18 @@ export const gymCoaches: CoachItem[] = [
 export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProps> = ({
   coaches: propCoaches,
 }) => {
-  const displayCoaches = propCoaches && propCoaches.length > 0 ? propCoaches : gymCoaches;
+  const displayCoaches = (propCoaches && propCoaches.length > 0 ? propCoaches : gymCoaches).map((c: any) => ({
+    id: c.id || `coach-${Math.random()}`,
+    title: c.title || c.name || "COACH",
+    subtitle: c.subtitle || c.role || "FITNESS COACH",
+    desc: c.desc || c.bio || "",
+    meta: c.meta || c.tag || "CERTIFIED COACH",
+    tags: Array.isArray(c.tags) && c.tags.length > 0 ? c.tags : Array.isArray(c.specialties) && c.specialties.length > 0 ? c.specialties : ["Fitness", "Coaching"],
+    image: c.image || "https://images.unsplash.com/photo-1567013127542-490d757e51fc",
+  }));
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [modalData, setModalData] = useState<ModalContent | null>(null);
+  const [certModalData, setCertModalData] = useState<CertificateData | null>(null);
 
   const handleScroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
@@ -98,36 +108,15 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
             marginBottom: "3rem",
-            flexWrap: "wrap",
-            gap: "2rem",
+            gap: "1.5rem",
           }}
         >
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: "0.75rem",
-              }}
-            >
-              <div style={{ width: 28, height: 2, background: LIME }} />
-              <span
-                style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: LIME,
-                  letterSpacing: "0.25em",
-                  textTransform: "uppercase",
-                }}
-              >
-                ATHLETE MENTORSHIP ROSTER
-              </span>
-            </div>
             <h2
               style={{
                 fontFamily: '"Big Shoulders Display", Impact, sans-serif',
@@ -137,6 +126,7 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
                 lineHeight: 0.92,
                 color: "#FFFFFF",
                 letterSpacing: "0.02em",
+                textAlign: "center",
               }}
             >
               LEARN FROM <span style={{ color: LIME }}>PROVEN ATHLETES</span>
@@ -377,8 +367,44 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
                   ))}
                 </div>
 
-                {/* Clean Apple-style Learn More Button */}
-                <div>
+                {/* Action Buttons: Learn More & Verify Certificate */}
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <button
+                    onClick={() =>
+                      setCertModalData({
+                        coachName: coach.title,
+                        coachTitle: coach.subtitle,
+                        certificateTitle: coach.title.includes("GIRISH")
+                          ? "MASTER TRAINER & BIOMECHANICS SPECIALIST"
+                          : `${coach.subtitle.toUpperCase()} ACCREDITATION`,
+                        issuer: "Hercules Fitness Certified Coach Board",
+                        issueYear: "VERIFIED ACTIVE 2026",
+                        certId: `HERC-CERT-${coach.id.toUpperCase()}`,
+                        skillsVerified: coach.tags,
+                        description: `Official certified coach accreditation for ${coach.title}. Certified expertise in ${coach.subtitle}, safety standards, and progressive hypertrophy coaching at Hercules Fitness.`,
+                        sealText: "CERTIFIED"
+                      })
+                    }
+                    style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: LIME,
+                      background: "rgba(216, 255, 62, 0.1)",
+                      border: "1px solid rgba(216, 255, 62, 0.3)",
+                      padding: "9px 12px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      flex: 1,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Award size={13} /> Certificate
+                  </button>
+
                   <button
                     onClick={() =>
                       setModalData({
@@ -391,26 +417,23 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
                     }
                     style={{
                       fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: 800,
                       color: "#080808",
                       background: LIME,
                       border: "none",
-                      padding: "10px 18px",
+                      padding: "9px 12px",
                       borderRadius: 6,
                       cursor: "pointer",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 6,
-                      width: "100%",
+                      gap: 4,
+                      flex: 1,
                       justifyContent: "center",
-                      letterSpacing: "0.12em",
-                      transition: "opacity 0.2s",
+                      letterSpacing: "0.08em",
                     }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
                   >
-                    Learn More <ChevronRight size={14} />
+                    Profile <ChevronRight size={13} />
                   </button>
                 </div>
               </div>
@@ -421,6 +444,9 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
 
       {/* Learn More Pop-up Modal */}
       <LearnMoreModal isOpen={!!modalData} onClose={() => setModalData(null)} data={modalData} />
+
+      {/* 📜 Interactive 3D Certificate Animation Modal */}
+      <CertificateModal isOpen={!!certModalData} onClose={() => setCertModalData(null)} data={certModalData} />
     </section>
   );
 };

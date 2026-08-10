@@ -227,3 +227,9 @@ video::-webkit-media-controls-overlay-play-button {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* Global Smooth & Rounded Corners System */
+button, .btn, a.hf-hero-btn-primary, .hf-hero-cta a {
+  border-radius: 50px !important;
+}
+
