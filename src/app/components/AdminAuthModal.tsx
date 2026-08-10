@@ -228,7 +228,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="abcd@gmail.com"
+                placeholder="admin@herculesfitness.in"
                 style={{
                   width: "100%",
                   padding: "12px 14px 12px 42px",
@@ -278,7 +278,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="abcd1234"
+                placeholder="••••••••••••"
                 style={{
                   width: "100%",
                   padding: "12px 44px 12px 42px",
