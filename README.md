@@ -1,11 +1,11 @@
+# HERCULES FITNESS FINAL
 
-  # Design Hercules FITNESS Landing Page
+This is the production codebase for Hercules Fitness Kalaburagi Landing Page & Admin Control Panel.
 
-  This is a code bundle for Design Hercules FITNESS Landing Page. The original project is available at https://www.figma.com/design/A06qZMnEpUyAbAJLLrC6k9/Design-Hercules-FITNESS-Landing-Page.
+## Running locally
 
-  ## Running the code
+Run `npm install` to install dependencies.
 
-  Run `npm i` to install the dependencies.
+Run `npm run dev` to start the development server.
 
-  Run `npm run dev` to start the development server.
-  
+Run `npm run build` to create a production bundle.
