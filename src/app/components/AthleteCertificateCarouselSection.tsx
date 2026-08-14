@@ -27,7 +27,7 @@ export const certificatesList: CertificateItem[] = [
     category: "MEN'S PHYSIQUE & BODYBUILDING",
     image: "/certificates/real_cert_1.png",
     details: {
-      coachName: "Mr. Girish Apurkar",
+      coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
       certificateTitle: "SHAFI SAMI BODYBUILDING CHAMPIONSHIP 2023",
       issuer: "Shafi Sami Fitness & Sports Association",
@@ -40,7 +40,7 @@ export const certificatesList: CertificateItem[] = [
         "Natural Bodybuilding Biomechanics",
       ],
       description:
-        "Official Gold Medal Merit Certificate awarded to Mr. Girish Apurkar at the Shafi Sami Bodybuilding & Men's Physique Championship 2023 for outstanding physique presentation and athletic excellence.",
+        "Official Gold Medal Merit Certificate awarded to Mr. Girish Shapurkar at the Shafi Sami Bodybuilding & Men's Physique Championship 2023 for outstanding physique presentation and athletic excellence.",
       sealText: "GOLD MEDALIST",
     },
   },
@@ -52,7 +52,7 @@ export const certificatesList: CertificateItem[] = [
     category: "STATE LEVEL CHAMPIONSHIP",
     image: "/certificates/real_cert_2.png",
     details: {
-      coachName: "Mr. Girish Apurkar",
+      coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
       certificateTitle: "KARNATAKA SHBEE 2023 STATE CHAMPIONSHIP",
       issuer: "Karnataka State Bodybuilding Federation",
@@ -65,7 +65,7 @@ export const certificatesList: CertificateItem[] = [
         "Advanced Hypertrophy Programming",
       ],
       description:
-        "Certificate of Merit presented to Mr. Girish Apurkar for achieving top honors in the Karnataka Shbee 2023 Open State Level Bodybuilding Competition.",
+        "Certificate of Merit presented to Mr. Girish Shapurkar for achieving top honors in the Karnataka Shbee 2023 Open State Level Bodybuilding Competition.",
       sealText: "STATE MERIT",
     },
   },
@@ -77,7 +77,7 @@ export const certificatesList: CertificateItem[] = [
     category: "INTERNATIONAL COACHING ACCREDITATION",
     image: "/certificates/real_cert_3.png",
     details: {
-      coachName: "Mr. Girish Apurkar",
+      coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
       certificateTitle: "MASTER TRAINER & NUTRITION SPECIALIST",
       issuer: "Integrated Fitness & Sports Institute (IFSI)",
@@ -102,7 +102,7 @@ export const certificatesList: CertificateItem[] = [
     category: "AMATEUR STATE CHAMPIONSHIP",
     image: "/certificates/real_cert_4.png",
     details: {
-      coachName: "Mr. Girish Apurkar",
+      coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
       certificateTitle: "KABA OPEN STATE BODYBUILDING 2023",
       issuer: "Karnataka Amateur Bodybuilders Association",
@@ -114,7 +114,7 @@ export const certificatesList: CertificateItem[] = [
         "Strict Natural Training Discipline",
       ],
       description:
-        "Official KABA Certificate honoring Mr. Girish Apurkar for demonstrating elite physical conditioning and sportsmanship at the Open State Championship.",
+        "Official KABA Certificate honoring Mr. Girish Shapurkar for demonstrating elite physical conditioning and sportsmanship at the Open State Championship.",
       sealText: "KABA VERIFIED",
     },
   },
@@ -126,7 +126,7 @@ export const certificatesList: CertificateItem[] = [
     category: "DISTRICT CHAMPIONSHIP",
     image: "/certificates/real_cert_5.png",
     details: {
-      coachName: "Mr. Girish Apurkar",
+      coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
       certificateTitle: "MIR CLASSIC DISTRICT CHAMPIONSHIP 2022",
       issuer: "District Bodybuilding & Fitness Association",
@@ -138,7 +138,7 @@ export const certificatesList: CertificateItem[] = [
         "Discipline & Consistency Mentorship",
       ],
       description:
-        "Merit award presented to Coach Girish Apurkar at the Mir Classic District Level Championship, celebrating years of dedication to natural strength and body composition.",
+        "Merit award presented to Coach Girish Shapurkar at the Mir Classic District Level Championship, celebrating years of dedication to natural strength and body composition.",
       sealText: "CHAMPION",
     },
   },

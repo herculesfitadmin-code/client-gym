@@ -102,7 +102,7 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founde
     founderData?.videoUrl ||
     "https://assets.mixkit.co/videos/preview/mixkit-man-doing-exercises-with-dumbbells-in-a-gym-42617-large.mp4";
 
-  const displayAuthor = "Mr. Girish Apurkar";
+  const displayAuthor = "Mr. Girish Shapurkar";
   const displaySubtext = "19+ YEARS OF REAL ATHLETIC EXPERIENCE — FOUNDER & HEAD COACH";
 
   // Auto-play video on scroll
@@ -154,7 +154,7 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ founde
   return (
     <section
       id="head-coach"
-      aria-label="Head Coach Section — Mr. Girish Apurkar"
+      aria-label="Head Coach Section — Mr. Girish Shapurkar"
       style={{
         padding: "5rem 2rem",
         background: "#080808",
