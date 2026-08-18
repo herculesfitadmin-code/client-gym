@@ -26,7 +26,7 @@ export const gymCoaches: CoachItem[] = [
     id: "coach-1",
     cardNumber: "01",
     totalCards: "04",
-    title: "GIRISH",
+    title: "GIRISH SHAPURKAR",
     subtitle: "Founder & Head Coach",
     meta: "19+ YEARS EXP • FOUNDER",
     desc: "Dedicated athlete first, coach second, businessman last. Building Hercules out of genuine passion to guide everyday members through biomechanics, heavy lifting, and athletic discipline.",
