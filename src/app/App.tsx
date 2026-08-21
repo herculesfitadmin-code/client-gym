@@ -790,7 +790,7 @@ function MainApp() {
           </div>
 
           {/* Desktop links */}
-          <div className="hf-desktop-nav" style={{ display: "flex", gap: 36, alignItems: "center" }}>
+          <div className="hf-desktop-nav" style={{ display: "flex", gap: "clamp(12px, 1.8vw, 28px)", alignItems: "center", flexShrink: 1 }}>
             {[
               { label: "FOUNDER STORY", href: "#founder-story" },
               { label: "PHILOSOPHY", href: "#philosophy" },
@@ -809,7 +809,8 @@ function MainApp() {
                   color: "#B3B3B3",
                   textDecoration: "none",
                   transition: "color 0.2s",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.14em",
+                  whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#B3B3B3")}
@@ -819,7 +820,7 @@ function MainApp() {
             ))}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
             <a href="tel:+919900897907" aria-label="Call Hercules Fitness" style={{ color: "#B3B3B3", lineHeight: 0 }}>
               <Phone size={16} />
             </a>
@@ -1122,62 +1123,68 @@ function MainApp() {
             style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: "2rem" }}
           >
             <a
-              href="#head-coach"
-              title="Our Story: Building the most trusted gym in Kalaburagi"
+              href="#membership"
+              title="Book Free Consultation at Hercules Fitness"
               className="hf-hero-btn-primary"
               style={{
                 ...MF,
-                fontSize: 10.5,
+                fontSize: 11,
                 background: LIME,
                 color: "#080808",
-                padding: "14px 24px",
+                padding: "14px 28px",
                 borderRadius: 50,
-                fontWeight: 800,
+                fontWeight: 900,
                 textDecoration: "none",
-                letterSpacing: "0.08em",
+                letterSpacing: "0.1em",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
                 transition: "all 0.2s",
                 whiteSpace: "nowrap",
-                boxShadow: "0 0 20px rgba(216,255,62,0.35)",
+                boxShadow: "0 0 25px rgba(216,255,62,0.4)",
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
-              OUR STORY: BUILDING THE MOST TRUSTED GYM IN KALABURAGI <ArrowRight size={13} />
+              BOOK FREE CONSULTATION <ArrowRight size={14} />
             </a>
+
             <a
-              href="#philosophy"
+              href="#head-coach"
+              title="Our Story: Building the most trusted gym in Kalaburagi"
               style={{
                 ...MF,
                 fontSize: 10.5,
-                color: "#fff",
+                color: "#FFFFFF",
                 padding: "14px 24px",
                 borderRadius: 50,
                 fontWeight: 700,
                 textDecoration: "none",
                 letterSpacing: "0.08em",
-                border: "1px solid rgba(255,255,255,0.25)",
-                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.28)",
+                background: "rgba(18, 18, 22, 0.75)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
                 transition: "all 0.2s",
-                whiteSpace: "nowrap",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255,255,255,0.45)";
-                el.style.background = "rgba(255,255,255,0.12)";
+                el.style.borderColor = LIME;
+                el.style.color = LIME;
+                el.style.background = "rgba(18, 18, 22, 0.95)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = "rgba(255,255,255,0.25)";
-                el.style.background = "rgba(255,255,255,0.06)";
+                el.style.borderColor = "rgba(255,255,255,0.28)";
+                el.style.color = "#FFFFFF";
+                el.style.background = "rgba(18, 18, 22, 0.75)";
               }}
             >
-              OUR PHILOSOPHY <ArrowRight size={13} />
+              OUR STORY — BUILDING THE MOST TRUSTED GYM IN KALABURAGI <ArrowRight size={13} />
             </a>
           </div>
 
@@ -1187,24 +1194,6 @@ function MainApp() {
               <MetricCard key={label} val={value} label={label} />
             ))}
           </div>
-        </div>
-
-        {/* Vertical label */}
-        <div
-          style={{
-            position: "absolute",
-            right: "2.5rem",
-            top: "50%",
-            transform: "translateY(-50%) rotate(90deg)",
-            ...MF,
-            fontSize: 9,
-            color: "rgba(255,255,255,0.18)",
-            letterSpacing: "0.35em",
-            whiteSpace: "nowrap",
-            transformOrigin: "center",
-          }}
-        >
-          HERCULES FITNESS — KALABURAGI 2019
         </div>
       </section>
 
