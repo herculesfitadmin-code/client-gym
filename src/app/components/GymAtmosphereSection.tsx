@@ -51,11 +51,25 @@ const gymPortfolioPhotos: GalleryPhoto[] = [
   },
 ];
 
-export const GymAtmosphereSection: React.FC = () => {
+export interface GymAtmosphereSectionProps {
+  facilitySlides?: any[];
+}
+
+export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ facilitySlides: propSlides }) => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [activePhoto, setActivePhoto] = useState<GalleryPhoto | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const displayPhotos: GalleryPhoto[] = (propSlides && propSlides.length > 0 ? propSlides : gymPortfolioPhotos).map((s: any, idx: number) => {
+    const defaultP = gymPortfolioPhotos[idx % gymPortfolioPhotos.length];
+    return {
+      id: s.id || `photo-${idx}`,
+      title: s.label || s.title || defaultP.title,
+      category: s.sub || s.category || defaultP.category,
+      src: s.img || s.src || defaultP.src,
+    };
+  });
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -210,9 +224,9 @@ export const GymAtmosphereSection: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* RIGHT: Portfolio Photos Grid (All 5 Real Gym Photos) */}
+          {/* RIGHT: Portfolio Photos Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
-            {gymPortfolioPhotos.map((photo, idx) => {
+            {displayPhotos.map((photo, idx) => {
               const isLarge = idx === 0; // Exterior building photo occupies full row
               return (
                 <motion.div

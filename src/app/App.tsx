@@ -492,11 +492,17 @@ function MainApp() {
   };
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      if (window.scrollY > 250) {
-        setHasScrolled(true);
-      } else {
-        setHasScrolled(false);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setHasScrolled((prev) => {
+            const next = window.scrollY > 250;
+            return prev !== next ? next : prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
       }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -1336,10 +1342,10 @@ function MainApp() {
       </section>
 
       {/* ═══════════════════════════════════════ PROGRAMS STACKED CARDS */}
-      <ProgramStackedCardsSection />
+      <ProgramStackedCardsSection programs={siteData.programs} />
 
       {/* ═══════════════════════════════════════ GYM ATMOSPHERE & WALKTHROUGH */}
-      <GymAtmosphereSection />
+      <GymAtmosphereSection facilitySlides={siteData.facilitySlides} />
 
       {/* ═══════════════════════════════════════ COACHES (3D STACKED CARDS) */}
       <CoachesStackedCardsSection coaches={siteData.coaches} />

@@ -6,10 +6,13 @@ import {
   FounderData,
   BlogPost,
   EnquiryLead,
+  ProgramItem,
+  FacilitySlide,
   defaultSiteData,
+  defaultPrograms,
+  defaultFacilitySlides,
   fetchCloudSiteData,
   pushToCloud,
-  DEFAULT_CLOUD_DB_URL,
 } from "../adminStore";
 import {
   FirebaseConfig,
@@ -370,15 +373,16 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
 }
 
 // ─── NAV ITEM DEFINITION ─────────────────────────────────────────────────────
-type PageId = "dashboard" | "homepage" | "pricing" | "coaches" | "media" | "offers" | "blog" | "contact" | "admins" | "enquiries" | "developer";
+type PageId = "dashboard" | "homepage" | "programs" | "pricing" | "coaches" | "media" | "offers" | "blog" | "contact" | "admins" | "enquiries" | "developer";
 interface NavItem { id: PageId; label: string; icon: React.ReactNode; dev?: boolean; }
 
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard",  label: "Dashboard",       icon: <BarChart2 size={16} /> },
   { id: "homepage",   label: "Homepage",         icon: <Home size={16} /> },
+  { id: "programs",   label: "Programs",         icon: <Zap size={16} /> },
   { id: "pricing",    label: "Pricing & Plans",  icon: <DollarSign size={16} /> },
   { id: "coaches",    label: "Coaches",          icon: <Users size={16} /> },
-  { id: "media",      label: "Media & Gallery",  icon: <Image size={16} /> },
+  { id: "media",      label: "Media & Arena",    icon: <Image size={16} /> },
   { id: "offers",     label: "Offers & Deals",   icon: <Tag size={16} /> },
   { id: "blog",       label: "Articles & Blog",  icon: <BookOpen size={16} /> },
   { id: "contact",    label: "Contact Info",     icon: <Phone size={16} /> },
@@ -620,6 +624,7 @@ function PageRouter({ page, draft, updateDraft, showToast, onResetData }: PagePr
   switch (page) {
     case "dashboard":  return <DashboardPage draft={draft} showToast={showToast} />;
     case "homepage":   return <HomepagePage draft={draft} updateDraft={updateDraft} />;
+    case "programs":   return <ProgramsPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
     case "pricing":    return <PricingPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
     case "coaches":    return <CoachesPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
     case "media":      return <MediaPage draft={draft} updateDraft={updateDraft} showToast={showToast} />;
@@ -1019,11 +1024,116 @@ function CoachesPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; 
 // ═════════════════════════════════════════════════════════════════════════════
 function MediaPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
   const founder = { ...defaultSiteData.founder, ...(draft?.founder || {}) };
+  const slides: FacilitySlide[] = draft.facilitySlides || defaultFacilitySlides;
+
+  const [editingSlide, setEditingSlide] = useState<number | null>(null);
+  const [newSlide, setNewSlide] = useState(false);
+
+  const emptySlide = (): FacilitySlide => ({
+    id: `fac-${Date.now()}`,
+    label: "",
+    sub: "STRENGTH & CONDITIONING",
+    img: "",
+  });
+
+  const [slideForm, setSlideForm] = useState<FacilitySlide>(emptySlide());
+
+  const saveSlide = () => {
+    if (!slideForm.label.trim()) { showToast("Photo label is required.", "error"); return; }
+    const updated = editingSlide !== null
+      ? slides.map((s, i) => i === editingSlide ? slideForm : s)
+      : [...slides, slideForm];
+    updateDraft("facilitySlides", updated);
+    showToast(editingSlide !== null ? "Photo updated!" : "Photo added!", "success");
+    setEditingSlide(null); setNewSlide(false); setSlideForm(emptySlide());
+  };
+
+  const deleteSlide = (i: number) => {
+    updateDraft("facilitySlides", slides.filter((_, idx) => idx !== i));
+    showToast("Photo removed from gallery.", "info");
+  };
+
+  const moveSlide = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= slides.length) return;
+    const reordered = [...slides];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+    updateDraft("facilitySlides", reordered);
+    showToast(`Photo moved ${direction}`, "success");
+  };
+
+  const startEditSlide = (i: number) => { setSlideForm({ ...slides[i] }); setEditingSlide(i); setNewSlide(true); };
+
+  if (newSlide) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={() => { setNewSlide(false); setEditingSlide(null); setSlideForm(emptySlide()); }} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer" }}><ArrowLeft size={18} /></button>
+        <SectionHead title={editingSlide !== null ? "EDIT GYM PHOTO" : "ADD GYM ATMOSPHERE PHOTO"} subtitle="Upload and categorize photos for 'The Athlete's Haven' gallery." />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 650 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>PHOTO DETAILS</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <MediaUploader
+              label="GYM PHOTO IMAGE FILE"
+              type="image"
+              value={slideForm.img}
+              onChange={v => setSlideForm(s => ({ ...s, img: v }))}
+              hint="Upload directly to Firebase Storage or paste image URL"
+            />
+            <Field label="PHOTO TITLE / LABEL"><Input value={slideForm.label} onChange={v => setSlideForm(s => ({ ...s, label: v }))} placeholder="STRENGTH ZONE & SQUAT RACKS" /></Field>
+            <Field label="SUBTITLE / CATEGORY"><Input value={slideForm.sub} onChange={v => setSlideForm(s => ({ ...s, sub: v }))} placeholder="Free Weights & Heavy Lifting" /></Field>
+          </div>
+        </Card>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={saveSlide}><Save size={13} /> {editingSlide !== null ? "Update Photo" : "Add Photo"}</Btn>
+          <Btn variant="ghost" onClick={() => { setNewSlide(false); setEditingSlide(null); setSlideForm(emptySlide()); }}>Cancel</Btn>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <SectionHead title="MEDIA & GALLERY" subtitle="Manage founder story media and before/after images." />
+      <SectionHead title="MEDIA & ARENA GALLERY" subtitle="Manage founder story media, before/after transformations, and gym atmosphere gallery photos." />
+      
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Gym Atmosphere & Facility Photos CRUD */}
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em" }}>GYM ATMOSPHERE & ARENA PHOTOS (THE ATHLETE'S HAVEN)</div>
+              <div style={{ ...SF, fontSize: 12, color: MUTED, marginTop: 4 }}>Upload, replace, delete, and reorder photos displayed in the public gym gallery.</div>
+            </div>
+            <Btn small onClick={() => { setSlideForm(emptySlide()); setEditingSlide(null); setNewSlide(true); }}><Plus size={13} /> Add Gym Photo</Btn>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {slides.map((slide, i) => (
+              <div key={slide.id || i} style={{ background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 14, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                {slide.img ? (
+                  <img src={slide.img} alt={slide.label} style={{ width: 75, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 75, height: 52, borderRadius: 6, background: SURFACE, border: `1px dashed ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, ...MF, fontSize: 9 }}>NO IMAGE</div>
+                )}
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ ...DF, fontSize: 16, color: TEXT }}>{slide.label || "GYM PHOTO"}</div>
+                  <div style={{ ...MF, fontSize: 10, color: ACCENT, marginTop: 2 }}>{slide.sub}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button onClick={() => moveSlide(i, "up")} disabled={i === 0} title="Move Up" style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: i === 0 ? MUTED : TEXT, opacity: i === 0 ? 0.3 : 1, padding: "5px 9px", borderRadius: 6, cursor: i === 0 ? "not-allowed" : "pointer" }}>↑</button>
+                  <button onClick={() => moveSlide(i, "down")} disabled={i === slides.length - 1} title="Move Down" style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: i === slides.length - 1 ? MUTED : TEXT, opacity: i === slides.length - 1 ? 0.3 : 1, padding: "5px 9px", borderRadius: 6, cursor: i === slides.length - 1 ? "not-allowed" : "pointer" }}>↓</button>
+                  <Btn small variant="secondary" onClick={() => startEditSlide(i)}><Edit3 size={12} /> Edit</Btn>
+                  <Btn small danger onClick={() => deleteSlide(i)}><Trash2 size={12} /></Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Founder Story Media */}
         <Card>
           <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>FOUNDER STORY MEDIA</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1042,6 +1152,7 @@ function MediaPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; up
           </div>
         </Card>
 
+        {/* Before / After Transformation */}
         <Card>
           <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>BEFORE / AFTER TRANSFORMATION</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1072,6 +1183,7 @@ function MediaPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; up
           </div>
         </Card>
 
+        {/* Founder Quote */}
         <Card>
           <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>FOUNDER QUOTE</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

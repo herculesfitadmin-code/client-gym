@@ -117,6 +117,11 @@ export function subscribeToFirebaseSiteData(
           const raw = snapshot.data();
           if (raw && raw.data) {
             const parsed = typeof raw.data === "string" ? JSON.parse(raw.data) : raw.data;
+            try {
+              localStorage.setItem("hercules_admin_site_data_v9", JSON.stringify(parsed));
+            } catch (err) {
+              console.warn("Failed to cache snapshot in localStorage:", err);
+            }
             onData(parsed);
           }
         }

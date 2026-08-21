@@ -433,70 +433,96 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
           </div>
         </div>
       </motion.div>
-    </div>
-  );
-};
 
-export const ProgramStackedCardsSection: React.FC = () => {
+export interface ProgramStackedCardsSectionProps {
+  programs?: any[];
+}
+
+export const ProgramStackedCardsSection: React.FC<ProgramStackedCardsSectionProps> = ({ programs: propPrograms }) => {
   const [modalData, setModalData] = useState<ModalContent | null>(null);
+
+  const displayPrograms: ProgramItem[] = (propPrograms && propPrograms.length > 0 ? propPrograms : gymPrograms).map((p: any, idx: number, arr: any[]) => {
+    const defaultProg = gymPrograms[idx % gymPrograms.length];
+    return {
+      id: p.id || `prog-${idx}`,
+      cardNumber: String(idx + 1).padStart(2, "0"),
+      totalCards: String(arr.length).padStart(2, "0"),
+      name: p.name || defaultProg.name,
+      subtitle: p.subtitle || defaultProg.subtitle,
+      meta: p.meta || `${p.duration || "60 MIN"} SESSION • ${(p.difficulty || "MODERATE").toUpperCase()} LEVEL`,
+      duration: p.duration || defaultProg.duration,
+      difficulty: p.difficulty || defaultProg.difficulty,
+      tag: p.tag || defaultProg.tag,
+      color: p.color || defaultProg.color,
+      desc: p.desc || defaultProg.desc,
+      features: p.features || defaultProg.features,
+      image: p.image || defaultProg.image,
+      equipment: p.equipment || defaultProg.equipment,
+    };
+  });
 
   return (
     <section
       id="programs"
-      aria-label="Training programs and fitness systems section"
       style={{
-        padding: "6rem 2rem 10rem",
-        background: "#08080A",
+        padding: "7rem 2rem",
+        background: "#080808",
         position: "relative",
-        overflow: "visible",
       }}
     >
-      <div style={{ maxWidth: 1320, margin: "0 auto" }}>
-        {/* Section Header */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            marginBottom: "3rem",
-            gap: "1.5rem",
-          }}
-        >
-          <div>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ marginBottom: "4rem" }}>
+          <div
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: 10,
+              color: LIME,
+              letterSpacing: "0.35em",
+              marginBottom: "1rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span style={{ display: "block", width: 24, height: 1, background: LIME }} />
+            TRAINING WITH ATHLETIC PURPOSE
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "2rem",
+            }}
+          >
             <h2
               style={{
                 fontFamily: '"Big Shoulders Display", Impact, sans-serif',
+                fontSize: "clamp(2.8rem, 5.5vw, 4.8rem)",
                 fontWeight: 900,
-                fontSize: "clamp(2.2rem, 4.5vw, 3.8rem)",
-                textTransform: "uppercase",
-                lineHeight: 0.92,
-                color: "#FFFFFF",
+                lineHeight: 0.95,
                 letterSpacing: "0.02em",
-                textAlign: "center",
+                color: "#FFFFFF",
+                margin: 0,
               }}
             >
-              TRAIN WITH
-              <br />
-              <span style={{ color: LIME }}>ATHLETIC PURPOSE</span>
+              OUR CORE <span style={{ color: LIME }}>PROGRAMS</span>
             </h2>
-          </div>
 
-          <div>
             <a
               href="#membership"
               style={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: 11,
-                fontWeight: 700,
                 color: LIME,
-                background: "transparent",
-                border: `1px solid ${LIME}55`,
-                padding: "12px 24px",
-                borderRadius: 40,
-                textDecoration: "none",
                 letterSpacing: "0.15em",
+                textDecoration: "none",
+                padding: "10px 20px",
+                border: `1px solid ${LIME}40`,
+                borderRadius: 4,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
@@ -520,12 +546,12 @@ export const ProgramStackedCardsSection: React.FC = () => {
 
         {/* Sticky Stacked Cards List */}
         <div>
-          {gymPrograms.map((program, index) => (
+          {displayPrograms.map((program, index) => (
             <StackedProgramCard
               key={program.id}
               program={program}
               index={index}
-              totalCards={gymPrograms.length}
+              totalCards={displayPrograms.length}
               onLearnMore={(data) => setModalData(data)}
             />
           ))}

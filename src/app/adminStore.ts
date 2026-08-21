@@ -68,6 +68,23 @@ export interface LegalPolicies {
   refundPolicy: string;
 }
 
+export interface ProgramItem {
+  id: string;
+  name: string;
+  duration: string;
+  difficulty: string;
+  tag: string;
+  color: string;
+  desc: string;
+}
+
+export interface FacilitySlide {
+  id: string;
+  label: string;
+  sub: string;
+  img: string;
+}
+
 export interface EnquiryLead {
   id: string;
   name: string;
@@ -84,17 +101,93 @@ export interface AdminSiteData {
   offer: SiteOffer;
   plans: PricingPlan[];
   coaches: CoachItem[];
+  programs?: ProgramItem[];
+  facilitySlides?: FacilitySlide[];
   admins: AdminUser[];
   founder: FounderData;
   blogs: BlogPost[];
   policies: LegalPolicies;
   googleSheetWebhookUrl?: string;
   enquiries?: EnquiryLead[];
-  cloudDbEndpointUrl?: string;
 }
 
-export const DEFAULT_CLOUD_DB_URL =
-  "https://jsonblob.com/api/jsonBlob/019fccdb-adc5-7279-b99d-038493c8679f";
+export const defaultPrograms: ProgramItem[] = [
+  {
+    id: "prog-1",
+    name: "ELITE STRENGTH",
+    duration: "60 MIN",
+    difficulty: "ADVANCED",
+    tag: "POWER",
+    color: "#D8FF3E",
+    desc: "Olympic lifting, powerlifting fundamentals, and progressive overload mastery for serious athletes chasing maximum output.",
+  },
+  {
+    id: "prog-2",
+    name: "HIIT PROTOCOL",
+    duration: "45 MIN",
+    difficulty: "INTENSE",
+    tag: "BURN",
+    color: "#FF3E3E",
+    desc: "High-intensity interval training engineered for maximum caloric expenditure, VO₂ max gains, and metabolic conditioning.",
+  },
+  {
+    id: "prog-3",
+    name: "COMBAT ARTS",
+    duration: "75 MIN",
+    difficulty: "MODERATE",
+    tag: "FIGHT",
+    color: "#3EFFD8",
+    desc: "MMA, boxing fundamentals, and functional combat drills for total-body athleticism, coordination and raw toughness.",
+  },
+  {
+    id: "prog-4",
+    name: "BODY RECOMP",
+    duration: "55 MIN",
+    difficulty: "MODERATE",
+    tag: "SCULPT",
+    color: "#FF3ED8",
+    desc: "Simultaneous fat loss and muscle gain through precision programming, tempo work, and targeted metabolic stress.",
+  },
+  {
+    id: "prog-5",
+    name: "ENDURANCE",
+    duration: "90 MIN",
+    difficulty: "GRUELING",
+    tag: "GRIND",
+    color: "#D8FF3E",
+    desc: "Long-form cardio and lactate threshold training for peak athletic performance, mental fortitude, and stamina.",
+  },
+  {
+    id: "prog-6",
+    name: "RECOVERY",
+    duration: "40 MIN",
+    difficulty: "ACTIVE",
+    tag: "HEAL",
+    color: "#A83EFF",
+    desc: "Structured mobility, PNF stretching, foam rolling, and fascia release protocols to optimise recovery between sessions.",
+  },
+];
+
+export const defaultFacilitySlides: FacilitySlide[] = [
+  {
+    id: "fac-1",
+    label: "CARDIO DECK",
+    sub: "32 Premium Machines",
+    img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
+  },
+  {
+    id: "fac-2",
+    label: "STRENGTH ZONE",
+    sub: "Eleiko & Hammer Strength Racks",
+    img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b",
+  },
+  {
+    id: "fac-3",
+    label: "HERCULES GYM FLOOR",
+    sub: "New Jewargi Road, Kalaburagi",
+    img: "https://images.unsplash.com/photo-1540497077202-7c8a3999166f",
+  },
+];
 
 import {
   fetchFirebaseSiteData,
@@ -105,92 +198,71 @@ export function sanitizeSiteData(raw: any): AdminSiteData {
   if (!raw || typeof raw !== "object") return defaultSiteData;
   return {
     tagline: {
-      headlineMain: raw.tagline?.headlineMain || defaultSiteData.tagline.headlineMain,
-      headlineHighlight: raw.tagline?.headlineHighlight || defaultSiteData.tagline.headlineHighlight,
-      subtitle: raw.tagline?.subtitle || defaultSiteData.tagline.subtitle,
-      heroVideoUrl: raw.tagline?.heroVideoUrl || defaultSiteData.tagline.heroVideoUrl,
+      headlineMain: raw.tagline?.headlineMain ?? defaultSiteData.tagline.headlineMain,
+      headlineHighlight: raw.tagline?.headlineHighlight ?? defaultSiteData.tagline.headlineHighlight,
+      subtitle: raw.tagline?.subtitle ?? defaultSiteData.tagline.subtitle,
+      heroVideoUrl: raw.tagline?.heroVideoUrl ?? defaultSiteData.tagline.heroVideoUrl,
       heroMetrics: Array.isArray(raw.tagline?.heroMetrics) && raw.tagline.heroMetrics.length > 0
         ? raw.tagline.heroMetrics
         : defaultSiteData.tagline.heroMetrics,
     },
     offer: {
       enabled: typeof raw.offer?.enabled === "boolean" ? raw.offer.enabled : defaultSiteData.offer.enabled,
-      announcementText: raw.offer?.announcementText || defaultSiteData.offer.announcementText,
-      badgeText: raw.offer?.badgeText || defaultSiteData.offer.badgeText,
+      announcementText: raw.offer?.announcementText ?? defaultSiteData.offer.announcementText,
+      badgeText: raw.offer?.badgeText ?? defaultSiteData.offer.badgeText,
       discountPercentage: typeof raw.offer?.discountPercentage === "number" ? raw.offer.discountPercentage : defaultSiteData.offer.discountPercentage,
     },
     plans: Array.isArray(raw.plans) && raw.plans.length > 0 ? raw.plans : defaultSiteData.plans,
     coaches: Array.isArray(raw.coaches) && raw.coaches.length > 0 ? raw.coaches : defaultSiteData.coaches,
+    programs: Array.isArray(raw.programs) && raw.programs.length > 0 ? raw.programs : defaultSiteData.programs,
+    facilitySlides: Array.isArray(raw.facilitySlides) && raw.facilitySlides.length > 0 ? raw.facilitySlides : defaultSiteData.facilitySlides,
     admins: Array.isArray(raw.admins) && raw.admins.length > 0 ? raw.admins : defaultSiteData.admins,
     founder: {
-      image: raw.founder?.image || defaultSiteData.founder.image,
-      mediaType: raw.founder?.mediaType || defaultSiteData.founder.mediaType,
-      videoUrl: raw.founder?.videoUrl || defaultSiteData.founder.videoUrl,
-      quote: raw.founder?.quote || defaultSiteData.founder.quote,
-      quoteAuthor: raw.founder?.quoteAuthor || defaultSiteData.founder.quoteAuthor,
-      quoteSubtext: raw.founder?.quoteSubtext || defaultSiteData.founder.quoteSubtext,
-      beforeImage: raw.founder?.beforeImage || defaultSiteData.founder.beforeImage,
-      afterImage: raw.founder?.afterImage || defaultSiteData.founder.afterImage,
+      image: raw.founder?.image ?? defaultSiteData.founder.image,
+      mediaType: raw.founder?.mediaType ?? defaultSiteData.founder.mediaType,
+      videoUrl: raw.founder?.videoUrl ?? defaultSiteData.founder.videoUrl,
+      quote: raw.founder?.quote ?? defaultSiteData.founder.quote,
+      quoteAuthor: raw.founder?.quoteAuthor ?? defaultSiteData.founder.quoteAuthor,
+      quoteSubtext: raw.founder?.quoteSubtext ?? defaultSiteData.founder.quoteSubtext,
+      beforeImage: raw.founder?.beforeImage ?? defaultSiteData.founder.beforeImage,
+      afterImage: raw.founder?.afterImage ?? defaultSiteData.founder.afterImage,
     },
     blogs: Array.isArray(raw.blogs) && raw.blogs.length > 0 ? raw.blogs : defaultSiteData.blogs,
     policies: {
-      privacyPolicy: raw.policies?.privacyPolicy || defaultSiteData.policies.privacyPolicy,
-      termsAndConditions: raw.policies?.termsAndConditions || defaultSiteData.policies.termsAndConditions,
-      refundPolicy: raw.policies?.refundPolicy || defaultSiteData.policies.refundPolicy,
+      privacyPolicy: raw.policies?.privacyPolicy ?? defaultSiteData.policies.privacyPolicy,
+      termsAndConditions: raw.policies?.termsAndConditions ?? defaultSiteData.policies.termsAndConditions,
+      refundPolicy: raw.policies?.refundPolicy ?? defaultSiteData.policies.refundPolicy,
     },
-    googleSheetWebhookUrl: raw.googleSheetWebhookUrl || defaultSiteData.googleSheetWebhookUrl,
+    googleSheetWebhookUrl: raw.googleSheetWebhookUrl ?? defaultSiteData.googleSheetWebhookUrl,
     enquiries: Array.isArray(raw.enquiries) ? raw.enquiries : [],
-    cloudDbEndpointUrl: raw.cloudDbEndpointUrl || defaultSiteData.cloudDbEndpointUrl,
   };
 }
 
-export async function fetchCloudSiteData(
-  customUrl?: string
-): Promise<AdminSiteData | null> {
-  // First attempt Firebase Firestore Backend Database
-  const fbData = await fetchFirebaseSiteData();
-  if (fbData) return sanitizeSiteData(fbData);
-
-  // Fallback to JSONBlob Cloud Database
-  const url = customUrl || DEFAULT_CLOUD_DB_URL;
+export async function fetchCloudSiteData(): Promise<AdminSiteData | null> {
   try {
-    const res = await fetch(url, { method: "GET" });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && typeof data === "object") {
-        return sanitizeSiteData(data);
-      }
+    const fbData = await fetchFirebaseSiteData();
+    if (fbData) {
+      return sanitizeSiteData(fbData);
     }
+
+    // Auto-seed Firebase Firestore ONCE if document is completely empty or missing
+    console.log("Firebase Firestore empty or not initialized. Auto-seeding defaultSiteData...");
+    await pushToFirebase(defaultSiteData);
+    return defaultSiteData;
   } catch (e) {
-    console.error("Cloud DB Fetch Error:", e);
+    console.error("Firebase Firestore fetch error:", e);
+    return null;
   }
-  return null;
 }
 
 export async function pushToCloud(
-  data: AdminSiteData,
-  customUrl?: string
+  data: AdminSiteData
 ): Promise<boolean> {
-  // Directly push to Firebase Firestore as primary database
   const fbResult = await pushToFirebase(data);
-  if (fbResult) return true;
-
-  const url = customUrl || data.cloudDbEndpointUrl || DEFAULT_CLOUD_DB_URL;
-  try {
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    return res.ok;
-  } catch (e) {
-    console.error("Cloud DB Push Error:", e);
-    return false;
-  }
+  return fbResult.success;
 }
 
 export const defaultSiteData: AdminSiteData = {
-  cloudDbEndpointUrl: DEFAULT_CLOUD_DB_URL,
   tagline: {
     headlineMain: "BUILD A STRONGER BODY",
     headlineHighlight: "YOU DON'T NEED TO BE FIT BEFORE YOU JOIN",
@@ -288,6 +360,8 @@ export const defaultSiteData: AdminSiteData = {
     },
   ],
   coaches: gymCoaches,
+  programs: defaultPrograms,
+  facilitySlides: defaultFacilitySlides,
   admins: [
     {
       id: "admin-1",
