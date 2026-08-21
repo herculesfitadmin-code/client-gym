@@ -232,28 +232,11 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
       aria-label="You Are Being Trained Under An Athlete"
       style={{
         padding: "6rem 1.5rem 5rem",
-        background: "linear-gradient(180deg, #080808 0%, #0D0D12 50%, #080808 100%)",
+        background: "#D8FF3E",
         position: "relative",
         overflow: "hidden",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Subtle radial glow */}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "80vw",
-          height: "60vh",
-          background:
-            "radial-gradient(circle, rgba(216,255,62,0.05) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
-
       <div
         style={{
           maxWidth: 1360,
@@ -273,16 +256,16 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
           <h2
             style={{
               ...DF,
-              fontSize: "clamp(2.4rem, 6vw, 4.5rem)",
+              fontSize: "clamp(2.2rem, 5.2vw, 4.2rem)",
               lineHeight: 0.95,
               textTransform: "uppercase",
-              color: "#FFFFFF",
+              color: "#080808",
               margin: 0,
-              letterSpacing: "-0.01em",
+              letterSpacing: "-0.02em",
             }}
           >
             YOU ARE BEING TRAINED UNDER <br />
-            <span style={{ color: LIME }}>AN ATHLETE</span>
+            <span style={{ color: "#080808", background: "rgba(0,0,0,0.08)", padding: "2px 14px", borderRadius: 12 }}>AN ATHLETE</span>
           </h2>
         </div>
 
@@ -315,7 +298,7 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                   zIndex: t.zIndex,
                   cursor: "pointer",
                   transition: isFanned
-                    ? "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1)"
+                    ? "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)"
                     : "transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
                   willChange: "transform",
                   transformOrigin: "center bottom",
@@ -323,19 +306,14 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
               >
                 <div
                   style={{
-                    borderRadius: 18,
-                    overflow: "hidden",
-                    border:
-                      hoveredIndex === idx
-                        ? `2px solid ${LIME}`
-                        : "1px solid rgba(255,255,255,0.12)",
-                    background: "#0F0F14",
-                    boxShadow:
-                      hoveredIndex === idx
-                        ? "0 25px 50px rgba(0,0,0,0.9)"
-                        : "0 15px 40px rgba(0,0,0,0.7)",
-                    transition:
-                      "border 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+                    background: "#08080A",
+                    border: hoveredIndex === idx ? "2px solid #080808" : "1px solid rgba(0, 0, 0, 0.35)",
+                    borderRadius: 14,
+                    padding: 5,
+                    boxShadow: hoveredIndex === idx
+                      ? "0 25px 50px rgba(0, 0, 0, 0.6)"
+                      : "0 16px 36px rgba(0, 0, 0, 0.4)",
+                    transition: "all 0.3s ease",
                   }}
                 >
                   <img
@@ -346,7 +324,8 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                       width: "100%",
                       height: "auto",
                       display: "block",
-                      objectFit: "cover",
+                      objectFit: "contain",
+                      borderRadius: 10,
                       userSelect: "none",
                     }}
                   />
@@ -382,11 +361,11 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                   flex: "0 0 78vw",
                   maxWidth: 310,
                   scrollSnapAlign: "center",
-                  borderRadius: 18,
-                  overflow: "hidden",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  background: "#0F0F14",
-                  boxShadow: "0 15px 40px rgba(0,0,0,0.8)",
+                  background: "#08080A",
+                  border: "1px solid rgba(0, 0, 0, 0.35)",
+                  borderRadius: 14,
+                  padding: 5,
+                  boxShadow: "0 16px 36px rgba(0, 0, 0, 0.4)",
                   cursor: "pointer",
                 }}
               >
@@ -398,13 +377,12 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                     width: "100%",
                     height: "auto",
                     display: "block",
-                    objectFit: "cover",
+                    objectFit: "contain",
+                    borderRadius: 10,
                   }}
                 />
               </div>
             ))}
-          </div>
-
           </div>
         </div>
       </div>

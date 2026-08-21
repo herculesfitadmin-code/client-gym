@@ -1,6 +1,4 @@
-// Firebase Configuration & Helper Services for Hercules Fitness
-import { db, firebaseConfig as LIB_FIREBASE_CONFIG } from "../lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db, doc, getDoc, setDoc, firebaseConfig as LIB_FIREBASE_CONFIG } from "../lib/firebase";
 
 export interface FirebaseConfig {
   apiKey: string;

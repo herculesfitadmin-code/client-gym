@@ -433,6 +433,9 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
           </div>
         </div>
       </motion.div>
+    </div>
+  );
+};
 
 export interface ProgramStackedCardsSectionProps {
   programs?: any[];

@@ -96,28 +96,11 @@ export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ faci
       aria-label="Gym atmosphere and facility gallery section"
       style={{
         padding: "7rem 2rem 9rem",
-        background: "#0A0A0C",
+        background: "#D8FF3E",
         position: "relative",
         overflow: "hidden",
-        borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
       }}
     >
-      {/* Background ambient spotlight */}
-      <div
-        style={{
-          position: "absolute",
-          top: "30%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 800,
-          height: 400,
-          background: `radial-gradient(ellipse, ${LIME}10 0%, transparent 70%)`,
-          filter: "blur(80px)",
-          pointerEvents: "none",
-        }}
-      />
-
       <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 2 }}>
         {/* Section Header */}
         <div
@@ -129,17 +112,17 @@ export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ faci
         >
           <h2
             style={{
-              fontFamily: '"Big Shoulders Display", Impact, sans-serif',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
               fontWeight: 900,
-              fontSize: "clamp(2.5rem, 5.5vw, 4.8rem)",
+              fontSize: "clamp(2.2rem, 5.2vw, 4.2rem)",
               textTransform: "uppercase",
               lineHeight: 0.92,
-              color: "#FFFFFF",
-              letterSpacing: "0.02em",
+              color: "#080808",
+              letterSpacing: "-0.02em",
               margin: 0,
             }}
           >
-            THE ATHLETE&apos;S <span style={{ color: LIME }}>HAVEN</span>
+            THE ATHLETE&apos;S <span style={{ color: "#080808", background: "rgba(0,0,0,0.08)", padding: "2px 14px", borderRadius: 12 }}>HAVEN</span>
           </h2>
         </div>
 

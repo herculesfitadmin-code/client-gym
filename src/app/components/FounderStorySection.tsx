@@ -11,7 +11,7 @@ const DF: React.CSSProperties = {
 };
 
 const MF: React.CSSProperties = {
-  fontFamily: '"JetBrains Mono", monospace',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
 };
 
 const BF: React.CSSProperties = {

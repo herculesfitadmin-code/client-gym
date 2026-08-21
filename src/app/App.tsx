@@ -42,14 +42,17 @@ const BLUE = "#3E82FF";
 const PURPLE = "#A83EFF";
 
 const DF: React.CSSProperties = {
-  fontFamily: '"Big Shoulders Display", Impact, sans-serif',
-  fontWeight: 900,
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Inter", "Helvetica Neue", sans-serif',
+  fontWeight: 800,
+  letterSpacing: "-0.02em",
 };
 const MF: React.CSSProperties = {
-  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", "Helvetica Neue", sans-serif',
-  letterSpacing: "0.15em",
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", "Helvetica Neue", sans-serif',
+  fontWeight: 600,
 };
-const BF: React.CSSProperties = { fontFamily: '"DM Sans", sans-serif' };
+const BF: React.CSSProperties = {
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", "Helvetica Neue", sans-serif',
+};
 
 const glass: React.CSSProperties = {
   background: "rgba(13,13,13,0.75)",
@@ -643,23 +646,22 @@ function MainApp() {
 
   return (
     <div style={{ background: "#080808", color: "#fff", ...BF, overflowX: "clip" }} role="document">
-      {/* ─── SCROLL-TRIGGERED NEON ANNOUNCEMENT POPUP ─── */}
+      {/* ⚡ FLOATING OFFERS POPUP */}
       {siteData.offer.enabled && hasScrolled && !offerDismissed && (
         <div
           className="hf-offer-popup"
           style={{
             position: "fixed",
             bottom: 24,
-            right: 24,
+            left: 24,
             zIndex: 9995,
-            background: "rgba(10, 10, 14, 0.95)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "2px solid #D8FF3E",
-            borderRadius: 12,
+            background: "#D8FF3E",
+            color: "#080808",
+            border: "1px solid rgba(0, 0, 0, 0.15)",
+            borderRadius: 22,
             padding: "16px 20px",
-            maxWidth: 380,
-            boxShadow: "0 12px 35px rgba(216, 255, 62, 0.3), 0 0 40px rgba(0, 0, 0, 0.9)",
+            maxWidth: 320,
+            boxShadow: "0 20px 50px rgba(216, 255, 62, 0.45), 0 10px 30px rgba(0, 0, 0, 0.5)",
             animation: "offerPopupSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
             display: "flex",
             flexDirection: "column",
@@ -667,74 +669,92 @@ function MainApp() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{
-                  ...MF,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  background: LIME,
-                  color: "#080808",
-                  padding: "3px 8px",
-                  borderRadius: 4,
-                  letterSpacing: "0.1em",
-                }}
-              >
-                🔥 {siteData.offer.badgeText || "SPECIAL OFFER"}
-              </span>
-              {siteData.offer.discountPercentage > 0 && (
-                <span style={{ ...MF, fontSize: 10, color: LIME, fontWeight: 700 }}>
-                  {siteData.offer.discountPercentage}% OFF
-                </span>
-              )}
-            </div>
+            <span
+              style={{
+                ...MF,
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#080808",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                opacity: 0.8,
+              }}
+            >
+              🔥 LIMITED TIME OFFER
+            </span>
 
             <button
               onClick={() => setOfferDismissed(true)}
               style={{
-                background: "rgba(255, 255, 255, 0.08)",
+                background: "rgba(8, 8, 8, 0.12)",
                 border: "none",
                 borderRadius: "50%",
-                width: 24,
-                height: 24,
+                width: 26,
+                height: 26,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#A3A3A3",
+                color: "#080808",
                 cursor: "pointer",
                 transition: "background 0.2s",
               }}
+              aria-label="Close offer notification"
             >
               <X size={14} />
             </button>
           </div>
 
-          <p style={{ fontSize: 13, fontWeight: 600, color: "#FFFFFF", lineHeight: 1.5, margin: 0 }}>
+          {/* Huge 25% OFF Hero Accent */}
+          <div
+            style={{
+              ...DF,
+              fontSize: "clamp(2.6rem, 7vw, 3.4rem)",
+              fontWeight: 900,
+              color: "#080808",
+              lineHeight: 0.9,
+              letterSpacing: "-0.04em",
+              margin: "4px 0 2px",
+            }}
+          >
+            {siteData.offer.discountPercentage}% OFF
+          </div>
+
+          <div
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#18181B",
+              lineHeight: 1.35,
+              margin: 0,
+            }}
+          >
             {siteData.offer.announcementText}
-          </p>
+          </div>
 
           <a
             href="#membership"
+            onClick={() => setInquiryOpen(true)}
             style={{
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              background: LIME,
-              color: "#080808",
-              padding: "9px 14px",
-              borderRadius: 6,
-              fontSize: 11,
+              background: "#080808",
+              color: "#D8FF3E",
+              padding: "11px 20px",
+              borderRadius: 50,
+              fontSize: 12,
               fontWeight: 800,
-              fontFamily: '"JetBrains Mono", monospace',
-              letterSpacing: "0.1em",
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
+              letterSpacing: "0.06em",
               textDecoration: "none",
               marginTop: 4,
-              boxShadow: "0 4px 15px rgba(216, 255, 62, 0.3)",
+              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.3)",
               transition: "transform 0.15s ease",
             }}
           >
-            CLAIM OFFER NOW <ArrowRight size={13} />
+            FREE TRIAL <ArrowRight size={14} />
           </a>
         </div>
       )}
@@ -823,27 +843,6 @@ function MainApp() {
           <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
             <a href="tel:+919900897907" aria-label="Call Hercules Fitness" style={{ color: "#B3B3B3", lineHeight: 0 }}>
               <Phone size={16} />
-            </a>
-            <a
-              href="#membership"
-              style={{
-                ...MF,
-                fontSize: 10,
-                color: "#080808",
-                background: LIME,
-                padding: "9px 20px",
-                borderRadius: 50,
-                fontWeight: 800,
-                textDecoration: "none",
-                letterSpacing: "0.15em",
-                transition: "opacity 0.2s",
-                whiteSpace: "nowrap",
-                boxShadow: "0 0 15px rgba(216,255,62,0.3)",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-            >
-              EARN MENTORSHIP
             </a>
             <button
               className="hf-mobile-btn"
@@ -1092,13 +1091,14 @@ function MainApp() {
           <h1
             style={{
               ...DF,
-              fontSize: "clamp(2.1rem, 8.5vw, 8.5rem)",
-              lineHeight: 0.9,
+              fontSize: "clamp(2rem, 4.2vw, 4.2rem)",
+              lineHeight: 0.96,
               letterSpacing: "-0.01em",
               textTransform: "uppercase",
               marginBottom: "1rem",
               wordBreak: "break-word",
               overflowWrap: "break-word",
+              maxWidth: 820,
             }}
           >
             {siteData.tagline.headlineMain}
@@ -1542,20 +1542,9 @@ function MainApp() {
                   }}
                 >
                   <ChevronLeft size={14} color="#080808" />
+                  <ChevronLeft size={14} color="#080808" />
                   <ChevronRight size={14} color="#080808" />
                 </div>
-              </div>
-              <div
-                style={{
-                  ...MF,
-                  fontSize: 9,
-                  color: "#555",
-                  textAlign: "center",
-                  marginTop: 12,
-                  letterSpacing: "0.25em",
-                }}
-              >
-                DRAG THE CENTER BUTTON TO COMPARE
               </div>
             </div>
           </div>
@@ -1672,7 +1661,7 @@ function MainApp() {
                     {/* Website 25% Off Tag */}
                     <div
                       style={{
-                        fontFamily: '"JetBrains Mono", monospace',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
                         fontSize: 8.5,
                         fontWeight: 800,
                         color: "#FF3E3E",
@@ -2090,65 +2079,71 @@ function MainApp() {
           {/* ⚡ PERMANENT FOOTER NEON OFFER BANNER CARD */}
           {siteData.offer.enabled && (
             <div
+              className="hf-footer-offer-banner"
               style={{
-                background: "linear-gradient(135deg, rgba(216,255,62,0.12) 0%, rgba(13,13,16,0.95) 100%)",
-                border: "2px solid #D8FF3E",
-                borderRadius: 12,
-                padding: "2rem 2.5rem",
+                background: "#D8FF3E",
+                color: "#080808",
+                borderRadius: 28,
+                padding: "3rem 3.5rem",
                 marginBottom: "4rem",
-                boxShadow: "0 0 50px rgba(216, 255, 62, 0.15), 0 10px 40px rgba(0, 0, 0, 0.8)",
+                boxShadow: "none",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 flexWrap: "wrap",
-                gap: 20,
+                gap: 24,
               }}
             >
-              <div style={{ maxWidth: 720 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ maxWidth: 750 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                   <span
                     style={{
                       ...MF,
                       fontSize: 11,
                       fontWeight: 800,
-                      background: LIME,
-                      color: "#080808",
-                      padding: "4px 10px",
-                      borderRadius: 4,
+                      background: "#080808",
+                      color: "#D8FF3E",
+                      padding: "5px 12px",
+                      borderRadius: 50,
                       letterSpacing: "0.12em",
                       textTransform: "uppercase",
                     }}
                   >
-                    🔥 {siteData.offer.badgeText || "EXCLUSIVE OFFER"}
+                    🔥 {siteData.offer.badgeText || "LIMITED TIME OFFER"}
                   </span>
-                  {siteData.offer.discountPercentage > 0 && (
-                    <span
-                      style={{
-                        ...MF,
-                        fontSize: 11,
-                        color: LIME,
-                        fontWeight: 700,
-                        border: "1px solid rgba(216,255,62,0.4)",
-                        padding: "3px 8px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      {siteData.offer.discountPercentage}% OFF MEMBERSHIPS
-                    </span>
-                  )}
                 </div>
+
+                {/* MASSIVE 25% OFF HERO TYPOGRAPHY */}
+                <div
+                  style={{
+                    ...DF,
+                    fontSize: "clamp(3.8rem, 8.5vw, 6.5rem)",
+                    fontWeight: 900,
+                    lineHeight: 0.9,
+                    letterSpacing: "-0.04em",
+                    color: "#080808",
+                    margin: "8px 0 12px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {siteData.offer.discountPercentage}% OFF
+                </div>
+
                 <h3
                   style={{
                     ...DF,
-                    fontSize: "1.75rem",
-                    color: "#FFFFFF",
-                    letterSpacing: "0.04em",
-                    margin: "0 0 6px",
+                    fontSize: "clamp(1.25rem, 2.5vw, 1.85rem)",
+                    color: "#080808",
+                    lineHeight: 1.2,
+                    letterSpacing: "-0.02em",
+                    margin: "0 0 8px",
+                    textTransform: "uppercase",
+                    fontWeight: 800,
                   }}
                 >
                   {siteData.offer.announcementText}
                 </h3>
-                <p style={{ color: "#B3B3B3", fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                <p style={{ color: "#18181B", fontSize: 14, fontWeight: 600, margin: 0, lineHeight: 1.5, opacity: 0.9 }}>
                   Limited time promotional membership rate available at Hercules Fitness, Kalaburagi.
                 </p>
               </div>
@@ -2160,17 +2155,17 @@ function MainApp() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 10,
-                  background: LIME,
-                  color: "#080808",
-                  padding: "14px 28px",
-                  borderRadius: 6,
-                  fontSize: 13,
+                  background: "#080808",
+                  color: "#D8FF3E",
+                  padding: "16px 36px",
+                  borderRadius: 50,
+                  fontSize: 14,
                   fontWeight: 800,
-                  fontFamily: '"JetBrains Mono", monospace',
-                  letterSpacing: "0.12em",
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
+                  letterSpacing: "0.08em",
                   textDecoration: "none",
-                  boxShadow: "0 6px 20px rgba(216,255,62,0.35)",
-                  transition: "transform 0.2s ease",
+                  boxShadow: "none",
+                  transition: "transform 0.2s ease, background 0.2s ease",
                   flexShrink: 0,
                 }}
               >
@@ -2393,38 +2388,7 @@ function MainApp() {
                   <option value="Goal: General Fitness">Goal: General Fitness</option>
                 </select>
 
-                {/* Personal Training Coach Choice Dropdown (Optional) */}
-                <select
-                  value={consultCoach}
-                  onChange={(e) => setConsultCoach(e.target.value)}
-                  style={{
-                    background: "#0D0D0D",
-                    border: "1px solid rgba(216, 255, 62, 0.25)",
-                    color: LIME,
-                    padding: "12px 14px",
-                    borderRadius: 2,
-                    ...MF,
-                    fontSize: 11,
-                    outline: "none",
-                    cursor: "pointer",
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <option value="No Specific Coach (General Guidance)">
-                    🏋️ Select PT Coach (Optional) — Any Certified Coach
-                  </option>
-                  {(siteData.coaches || defaultSiteData.coaches).map((coach) => {
-                    const coachName = coach.title || (coach as any).name || "Coach";
-                    const coachSpecialty = coach.subtitle || (coach as any).role || "Certified Trainer";
-                    const coachMeta = coach.meta || (coach as any).experience || "";
-                    return (
-                      <option key={coach.id} value={`Coach ${coachName} (${coachSpecialty})`}>
-                        🏋️ Coach {coachName} — {coachSpecialty} {coachMeta ? `[${coachMeta}]` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
+
 
                 <button
                   type="submit"
@@ -2520,17 +2484,17 @@ function MainApp() {
                 onClick={() => setActivePolicyModal("privacy")}
                 style={{
                   ...MF,
-                  fontSize: 8,
-                  color: "#444",
+                  fontSize: 10,
+                  color: "#A1A1AA",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  letterSpacing: "0.2em",
-                  padding: 0,
+                  letterSpacing: "0.15em",
+                  padding: "4px 8px",
                   transition: "color 0.2s",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#A1A1AA")}
               >
                 PRIVACY POLICY
               </button>
@@ -2538,17 +2502,17 @@ function MainApp() {
                 onClick={() => setActivePolicyModal("terms")}
                 style={{
                   ...MF,
-                  fontSize: 8,
-                  color: "#444",
+                  fontSize: 10,
+                  color: "#A1A1AA",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  letterSpacing: "0.2em",
-                  padding: 0,
+                  letterSpacing: "0.15em",
+                  padding: "4px 8px",
                   transition: "color 0.2s",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#A1A1AA")}
               >
                 TERMS
               </button>
@@ -2556,17 +2520,17 @@ function MainApp() {
                 onClick={() => setActivePolicyModal("refunds")}
                 style={{
                   ...MF,
-                  fontSize: 8,
-                  color: "#444",
+                  fontSize: 10,
+                  color: "#A1A1AA",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  letterSpacing: "0.2em",
-                  padding: 0,
+                  letterSpacing: "0.15em",
+                  padding: "4px 8px",
                   transition: "color 0.2s",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = LIME)}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#444")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#A1A1AA")}
               >
                 REFUNDS
               </button>
@@ -2868,7 +2832,7 @@ function TestiCard({
           </div>
           <div
             style={{
-              fontFamily: '"JetBrains Mono", monospace',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif',
               fontSize: 8,
               color: "#D8FF3E",
               letterSpacing: "0.22em",
