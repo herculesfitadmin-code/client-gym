@@ -199,7 +199,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
               >
                 <div
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 11,
                     color: "#A1A1AA",
                     letterSpacing: "0.15em",
@@ -288,7 +288,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
                 <a
                   href="#membership"
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 11,
                     fontWeight: 800,
                     background: program.color,
@@ -328,7 +328,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
                     })
                   }
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 11,
                     fontWeight: 700,
                     color: program.color,
@@ -351,7 +351,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
 
                 <div
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 10,
                     color: "#A1A1AA",
                     display: "flex",
@@ -419,7 +419,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
                 <CheckCircle2 size={15} style={{ color: program.color, flexShrink: 0 }} />
                 <span
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 10,
                     color: "#D4D4D8",
                     letterSpacing: "0.08em",
@@ -475,7 +475,7 @@ export const ProgramStackedCardsSection: React.FC<ProgramStackedCardsSectionProp
         <div style={{ marginBottom: "4rem" }}>
           <div
             style={{
-              fontFamily: '"JetBrains Mono", monospace',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
               fontSize: 10,
               color: LIME,
               letterSpacing: "0.35em",
@@ -515,7 +515,7 @@ export const ProgramStackedCardsSection: React.FC<ProgramStackedCardsSectionProp
             <a
               href="#membership"
               style={{
-                fontFamily: '"JetBrains Mono", monospace',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                 fontSize: 11,
                 color: LIME,
                 letterSpacing: "0.15em",

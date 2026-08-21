@@ -42,7 +42,7 @@ const SURFACE2 = "#18181C";
 const BORDER = "rgba(255,255,255,0.07)";
 const TEXT = "#FFFFFF";
 const MUTED = "#71717A";
-const MF: React.CSSProperties = { fontFamily: '"JetBrains Mono", monospace' };
+const MF: React.CSSProperties = { fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif' };
 const DF: React.CSSProperties = { fontFamily: '"Big Shoulders Display", Impact, sans-serif', fontWeight: 900 };
 const SF: React.CSSProperties = { fontFamily: '"DM Sans", sans-serif' };
 
@@ -1265,6 +1265,22 @@ function MediaPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; up
       <SectionHead title="MEDIA & ARENA GALLERY" subtitle="Manage founder story media, before/after transformations, and gym atmosphere gallery photos." />
       
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* 9:16 Vertical Walkthrough Video Uploader */}
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 6 }}>ATHLETE'S HAVEN 9:16 WALKTHROUGH VIDEO</div>
+          <div style={{ ...SF, fontSize: 12, color: MUTED, marginBottom: 16 }}>Upload or change the vertical 9:16 video displayed in the gym atmosphere section.</div>
+          <MediaUploader
+            label="VERTICAL 9:16 WALKTHROUGH VIDEO"
+            type="video"
+            value={draft.heroWalkVideoUrl || "/herwalk.mp4"}
+            onChange={v => {
+              updateDraft("heroWalkVideoUrl", v);
+              showToast("Gym walkthrough video updated!", "success");
+            }}
+            hint="Upload vertical 9:16 video directly to Firebase Storage or paste MP4 URL"
+          />
+        </Card>
+
         {/* Gym Atmosphere & Facility Photos CRUD */}
         <Card>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>

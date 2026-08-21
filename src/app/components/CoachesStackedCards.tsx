@@ -367,44 +367,8 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
                   ))}
                 </div>
 
-                {/* Action Buttons: Learn More & Verify Certificate */}
-                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                  <button
-                    onClick={() =>
-                      setCertModalData({
-                        coachName: coach.title,
-                        coachTitle: coach.subtitle,
-                        certificateTitle: coach.title.includes("GIRISH")
-                          ? "MASTER TRAINER & BIOMECHANICS SPECIALIST"
-                          : `${coach.subtitle.toUpperCase()} ACCREDITATION`,
-                        issuer: "Hercules Fitness Certified Coach Board",
-                        issueYear: "VERIFIED ACTIVE 2026",
-                        certId: `HERC-CERT-${coach.id.toUpperCase()}`,
-                        skillsVerified: coach.tags,
-                        description: `Official certified coach accreditation for ${coach.title}. Certified expertise in ${coach.subtitle}, safety standards, and progressive hypertrophy coaching at Hercules Fitness.`,
-                        sealText: "CERTIFIED"
-                      })
-                    }
-                    style={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: LIME,
-                      background: "rgba(216, 255, 62, 0.1)",
-                      border: "1px solid rgba(216, 255, 62, 0.3)",
-                      padding: "9px 12px",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      flex: 1,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Award size={13} /> Certificate
-                  </button>
-
+                {/* Action Button: View Full Coach Profile */}
+                <div style={{ marginTop: 8 }}>
                   <button
                     onClick={() =>
                       setModalData({
@@ -416,24 +380,25 @@ export const CoachesStackedCardsSection: React.FC<CoachesStackedCardsSectionProp
                       })
                     }
                     style={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 10,
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
+                      fontSize: 11,
                       fontWeight: 800,
                       color: "#080808",
                       background: LIME,
                       border: "none",
-                      padding: "9px 12px",
-                      borderRadius: 6,
+                      padding: "12px 18px",
+                      borderRadius: 50,
                       cursor: "pointer",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 4,
-                      flex: 1,
+                      gap: 6,
+                      width: "100%",
                       justifyContent: "center",
                       letterSpacing: "0.08em",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
                     }}
                   >
-                    Profile <ChevronRight size={13} />
+                    VIEW COACH PROFILE <ChevronRight size={14} />
                   </button>
                 </div>
               </div>

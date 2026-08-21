@@ -46,7 +46,7 @@ const DF: React.CSSProperties = {
   fontWeight: 900,
 };
 const MF: React.CSSProperties = {
-  fontFamily: '"JetBrains Mono", monospace',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", "Helvetica Neue", sans-serif',
   letterSpacing: "0.15em",
 };
 const BF: React.CSSProperties = { fontFamily: '"DM Sans", sans-serif' };

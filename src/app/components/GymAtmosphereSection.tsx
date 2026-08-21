@@ -406,7 +406,7 @@ export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ faci
                 <div>
                   <div
                     style={{
-                      fontFamily: '"JetBrains Mono", monospace',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                       fontSize: 11,
                       color: LIME,
                       letterSpacing: "0.15em",
@@ -430,7 +430,7 @@ export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ faci
 
                 <div
                   style={{
-                    fontFamily: '"JetBrains Mono", monospace',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
                     fontSize: 11,
                     color: "#A1A1AA",
                     display: "flex",

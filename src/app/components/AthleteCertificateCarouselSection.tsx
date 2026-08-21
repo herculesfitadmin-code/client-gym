@@ -413,15 +413,24 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
         .hf-mobile-cert-track-wrapper {
           display: none;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .hf-desktop-cert-stack {
             display: none !important;
           }
           .hf-mobile-cert-track-wrapper {
             display: block !important;
           }
+          .hf-mobile-cert-track {
+            -webkit-overflow-scrolling: touch !important;
+            overflow-x: scroll !important;
+            overflow-y: hidden !important;
+            touch-action: pan-x pan-y !important;
+            scroll-behavior: smooth !important;
+          }
           .hf-mobile-cert-track::-webkit-scrollbar {
-            display: none;
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
           }
         }
       `}</style>

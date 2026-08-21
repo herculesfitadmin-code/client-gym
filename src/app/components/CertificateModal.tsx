@@ -11,7 +11,7 @@ const DF: React.CSSProperties = {
 };
 
 const MF: React.CSSProperties = {
-  fontFamily: '"JetBrains Mono", monospace',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif',
 };
 
 export interface CertificateData {
@@ -78,8 +78,8 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ isOpen, onCl
           justifyContent: "center",
           padding: "1.5rem",
           background: "rgba(0, 0, 0, 0.88)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
         }}
         onClick={onClose}
         data-lenis-prevent="true"
@@ -96,11 +96,10 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ isOpen, onCl
             maxHeight: "90vh",
             overflowY: "auto",
             background: "#08080A",
-            border: "1px solid rgba(216, 255, 62, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
             borderRadius: 24,
             padding: "clamp(1.5rem, 3.5vw, 2.5rem)",
-            boxShadow:
-              "0 30px 100px rgba(0, 0, 0, 0.95), 0 0 60px rgba(216, 255, 62, 0.12)",
+            boxShadow: "0 30px 90px rgba(0, 0, 0, 0.95)",
             color: "#FFFFFF",
           }}
           onClick={(e) => e.stopPropagation()}
@@ -110,8 +109,8 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ isOpen, onCl
             onClick={onClose}
             style={{
               position: "absolute",
-              top: 20,
-              right: 20,
+              top: 16,
+              right: 16,
               width: 38,
               height: 38,
               borderRadius: "50%",
@@ -122,7 +121,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ isOpen, onCl
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              zIndex: 10,
+              zIndex: 50,
               transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
