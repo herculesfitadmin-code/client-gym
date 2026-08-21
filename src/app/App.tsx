@@ -1346,7 +1346,8 @@ function MainApp() {
             <h2
               style={{
                 ...DF,
-                fontSize: "clamp(2.4rem, 5vw, 4.2rem)",
+                fontSize: "clamp(2.4rem, 6vw, 4.5rem)",
+                color: "#FFFFFF",
                 textTransform: "uppercase",
                 lineHeight: 0.92,
                 textAlign: "center",
@@ -1356,6 +1357,9 @@ function MainApp() {
               <br />
               <span style={{ color: LIME }}>IN THE CHARACTER</span>
             </h2>
+            <div style={{ ...MF, fontSize: 10, color: LIME, letterSpacing: "0.2em", textAlign: "center", marginTop: 10, fontWeight: 700 }}>
+              FOUNDER'S OWN PHYSICAL & MENTAL TRANSFORMATION — COACH GIRISH
+            </div>
           </div>
 
           <div className="hf-transform-grid">
@@ -1472,11 +1476,6 @@ function MainApp() {
                     ...MF,
                     fontSize: 9,
                     color: "#fff",
-                    background: "rgba(8,8,8,0.8)",
-                    padding: "4px 11px",
-                    borderRadius: 2,
-                    letterSpacing: "0.2em",
-                    pointerEvents: "none",
                   }}
                 >
                   BEFORE

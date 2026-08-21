@@ -332,7 +332,7 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                     background: "#0F0F14",
                     boxShadow:
                       hoveredIndex === idx
-                        ? `0 30px 60px rgba(0,0,0,0.9), 0 0 40px rgba(216,255,62,0.25)`
+                        ? "0 25px 50px rgba(0,0,0,0.9)"
                         : "0 15px 40px rgba(0,0,0,0.7)",
                     transition:
                       "border 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
@@ -405,68 +405,6 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
             ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              marginTop: "0.5rem",
-            }}
-          >
-            <button
-              onClick={() => {
-                if (mobileTrackRef.current) {
-                  mobileTrackRef.current.scrollBy({ left: -260, behavior: "smooth" });
-                }
-              }}
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(216,255,62,0.3)",
-                color: LIME,
-                borderRadius: 50,
-                padding: "6px 14px",
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              ← PREV
-            </button>
-
-            <span
-              style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 10,
-                color: LIME,
-                letterSpacing: "0.15em",
-                opacity: 0.9,
-              }}
-            >
-              SWIPE / TAP
-            </span>
-
-            <button
-              onClick={() => {
-                if (mobileTrackRef.current) {
-                  mobileTrackRef.current.scrollBy({ left: 260, behavior: "smooth" });
-                }
-              }}
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(216,255,62,0.3)",
-                color: LIME,
-                borderRadius: 50,
-                padding: "6px 14px",
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              NEXT →
-            </button>
           </div>
         </div>
       </div>

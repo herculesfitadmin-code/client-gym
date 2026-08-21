@@ -158,7 +158,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
           border: "1px solid rgba(255, 255, 255, 0.09)",
           borderColor: `${program.color}45`,
           borderRadius: 28,
-          boxShadow: `0 -12px 40px rgba(0,0,0,0.85), 0 30px 70px rgba(0,0,0,0.95), 0 0 30px ${program.color}20`,
+          boxShadow: "0 -12px 40px rgba(0,0,0,0.85), 0 30px 70px rgba(0,0,0,0.95)",
           overflow: "hidden",
           height: 480, // Identical uniform height across all 6 program cards
           display: "flex",
@@ -167,7 +167,7 @@ const StackedProgramCard: React.FC<StackedCardProps> = ({ program, index, totalC
         }}
         whileHover={{
           borderColor: `${program.color}75`,
-          boxShadow: `0 -12px 40px rgba(0,0,0,0.9), 0 35px 80px rgba(0,0,0,0.95), 0 0 35px ${program.color}35`,
+          boxShadow: "0 -12px 40px rgba(0,0,0,0.9), 0 35px 80px rgba(0,0,0,0.95)",
         }}
       >
         {/* Glow ambient background spot */}

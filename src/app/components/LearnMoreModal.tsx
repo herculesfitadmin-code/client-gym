@@ -72,10 +72,10 @@ export const LearnMoreModal: React.FC<LearnMoreModalProps> = ({ isOpen, onClose,
             maxHeight: "88vh",
             overflowY: "auto",
             background: "#0D0D11",
-            border: "1px solid rgba(216, 255, 62, 0.25)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
             borderRadius: 20,
             padding: "clamp(1.75rem, 4vw, 2.75rem)",
-            boxShadow: "0 30px 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(216, 255, 62, 0.08)",
+            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.95)",
             color: "#FFFFFF",
           }}
           onClick={(e) => e.stopPropagation()}
@@ -85,13 +85,14 @@ export const LearnMoreModal: React.FC<LearnMoreModalProps> = ({ isOpen, onClose,
             onClick={onClose}
             style={{
               position: "absolute",
-              top: 20,
-              right: 20,
+              top: 16,
+              right: 16,
+              zIndex: 50,
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.15)",
               color: "#E4E4E7",
               display: "flex",
               alignItems: "center",
@@ -107,73 +108,76 @@ export const LearnMoreModal: React.FC<LearnMoreModalProps> = ({ isOpen, onClose,
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLElement;
-              el.style.background = "rgba(255, 255, 255, 0.06)";
+              el.style.background = "rgba(255, 255, 255, 0.08)";
               el.style.color = "#E4E4E7";
-              el.style.borderColor = "rgba(255, 255, 255, 0.12)";
+              el.style.borderColor = "rgba(255, 255, 255, 0.15)";
             }}
             aria-label="Close dialog"
           >
             <X size={18} />
           </button>
 
-          {/* Badge */}
-          {data.badge && (
-            <div
+          {/* Header container with right margin to ensure zero overlap with close button */}
+          <div style={{ paddingRight: 44 }}>
+            {/* Badge */}
+            {data.badge && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 12px",
+                  background: "rgba(216,255,62,0.08)",
+                  border: "1px solid rgba(216,255,62,0.25)",
+                  borderRadius: 20,
+                  ...MF,
+                  fontSize: 9,
+                  color: LIME,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  marginBottom: "1rem",
+                }}
+              >
+                <Sparkles size={12} /> {data.badge}
+              </div>
+            )}
+
+            {/* Title */}
+            <h3
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 12px",
-                background: "rgba(216,255,62,0.08)",
-                border: "1px solid rgba(216,255,62,0.25)",
-                borderRadius: 20,
-                ...MF,
-                fontSize: 9,
-                color: LIME,
-                letterSpacing: "0.18em",
+                ...DF,
+                fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
+                lineHeight: 1,
                 textTransform: "uppercase",
-                marginBottom: "1rem",
+                color: "#FFFFFF",
+                marginBottom: data.subtitle ? "0.5rem" : "1.25rem",
               }}
             >
-              <Sparkles size={12} /> {data.badge}
-            </div>
-          )}
+              {data.title}
+            </h3>
 
-          {/* Title */}
-          <h3
-            style={{
-              ...DF,
-              fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)",
-              lineHeight: 1,
-              textTransform: "uppercase",
-              color: "#FFFFFF",
-              marginBottom: data.subtitle ? "0.5rem" : "1.25rem",
-            }}
-          >
-            {data.title}
-          </h3>
-
-          {/* Subtitle */}
-          {data.subtitle && (
-            <div
-              style={{
-                ...MF,
-                fontSize: 11,
-                color: LIME,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                marginBottom: "1.5rem",
-              }}
-            >
-              {data.subtitle}
-            </div>
-          )}
+            {/* Subtitle */}
+            {data.subtitle && (
+              <div
+                style={{
+                  ...MF,
+                  fontSize: 11,
+                  color: LIME,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                {data.subtitle}
+              </div>
+            )}
+          </div>
 
           {/* Divider */}
           <div
             style={{
               height: 1,
-              background: "linear-gradient(90deg, rgba(216,255,62,0.3) 0%, transparent 100%)",
+              background: "rgba(255, 255, 255, 0.1)",
               marginBottom: "1.5rem",
             }}
           />
@@ -245,13 +249,13 @@ export const LearnMoreModal: React.FC<LearnMoreModalProps> = ({ isOpen, onClose,
               style={{
                 ...MF,
                 fontSize: 11,
-                fontWeight: 700,
+                fontWeight: 800,
                 background: LIME,
                 color: "#080808",
-                padding: "11px 22px",
+                padding: "12px 24px",
                 borderRadius: 6,
                 textDecoration: "none",
-                letterSpacing: "0.15em",
+                letterSpacing: "0.12em",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
@@ -260,7 +264,7 @@ export const LearnMoreModal: React.FC<LearnMoreModalProps> = ({ isOpen, onClose,
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
-              {data.ctaText || "GET STARTED WITH COACH GIRISH"} <ArrowRight size={13} />
+              {data.ctaText && data.ctaText !== "GET STARTED WITH COACH GIRISH" ? data.ctaText : "GET STARTED"} <ArrowRight size={13} />
             </a>
 
             <button

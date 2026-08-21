@@ -166,9 +166,9 @@ export const GymAtmosphereSection: React.FC<GymAtmosphereSectionProps> = ({ faci
                 aspectRatio: "9 / 16",
                 borderRadius: 28,
                 overflow: "hidden",
-                border: "1px solid rgba(216, 255, 62, 0.3)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
                 background: "#000000",
-                boxShadow: "0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(216, 255, 62, 0.18)",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.95)",
               }}
             >
               {/* Native Vertical 9:16 Video (herwalk.mp4) */}
