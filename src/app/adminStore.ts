@@ -71,11 +71,16 @@ export interface LegalPolicies {
 export interface ProgramItem {
   id: string;
   name: string;
+  subtitle?: string;
+  meta?: string;
   duration: string;
   difficulty: string;
   tag: string;
   color: string;
   desc: string;
+  features?: string[];
+  image?: string;
+  equipment?: string;
 }
 
 export interface FacilitySlide {

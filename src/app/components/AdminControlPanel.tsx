@@ -379,10 +379,10 @@ interface NavItem { id: PageId; label: string; icon: React.ReactNode; dev?: bool
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard",  label: "Dashboard",       icon: <BarChart2 size={16} /> },
   { id: "homepage",   label: "Homepage",         icon: <Home size={16} /> },
-  { id: "programs",   label: "Programs",         icon: <Zap size={16} /> },
+  { id: "programs",   label: "Training Programs", icon: <Zap size={16} /> },
   { id: "pricing",    label: "Pricing & Plans",  icon: <DollarSign size={16} /> },
   { id: "coaches",    label: "Coaches",          icon: <Users size={16} /> },
-  { id: "media",      label: "Media & Arena",    icon: <Image size={16} /> },
+  { id: "media",      label: "Athlete's Haven (Photos)", icon: <Image size={16} /> },
   { id: "offers",     label: "Offers & Deals",   icon: <Tag size={16} /> },
   { id: "blog",       label: "Articles & Blog",  icon: <BookOpen size={16} /> },
   { id: "contact",    label: "Contact Info",     icon: <Phone size={16} /> },
@@ -794,6 +794,171 @@ function HomepagePage({ draft, updateDraft }: { draft: AdminSiteData; updateDraf
             ))}
           </div>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: PROGRAMS MANAGEMENT (CRUD + Reordering)
+// ═════════════════════════════════════════════════════════════════════════════
+function ProgramsPage({ draft, updateDraft, showToast }: { draft: AdminSiteData; updateDraft: any; showToast: any }) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [newProg, setNewProg] = useState(false);
+  const programs: ProgramItem[] = draft.programs || defaultPrograms;
+
+  const emptyProgram = (): ProgramItem => ({
+    id: `prog-${Date.now()}`,
+    name: "",
+    subtitle: "",
+    duration: "60 MIN",
+    difficulty: "MODERATE",
+    tag: "POWER",
+    color: "#D8FF3E",
+    desc: "",
+    equipment: "",
+    features: [""],
+    image: "",
+  });
+
+  const [form, setForm] = useState<ProgramItem>(emptyProgram());
+
+  const saveProgram = () => {
+    if (!form.name.trim()) { showToast("Program name is required.", "error"); return; }
+    const updated = editing !== null
+      ? programs.map((p, i) => i === editing ? form : p)
+      : [...programs, form];
+    updateDraft("programs", updated);
+    showToast(editing !== null ? "Program updated!" : "Program added!", "success");
+    setEditing(null); setNewProg(false); setForm(emptyProgram());
+  };
+
+  const deleteProgram = (i: number) => {
+    updateDraft("programs", programs.filter((_, idx) => idx !== i));
+    showToast("Program deleted.", "info");
+  };
+
+  const moveProgram = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= programs.length) return;
+    const reordered = [...programs];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+    updateDraft("programs", reordered);
+    showToast(`Program moved ${direction}`, "success");
+  };
+
+  const startEdit = (i: number) => {
+    const p = programs[i];
+    setForm({
+      ...p,
+      features: Array.isArray(p.features) && p.features.length > 0 ? p.features : [""],
+    });
+    setEditing(i);
+    setNewProg(true);
+  };
+
+  if (newProg) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <button onClick={() => { setNewProg(false); setEditing(null); setForm(emptyProgram()); }} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer" }}><ArrowLeft size={18} /></button>
+        <SectionHead title={editing !== null ? "EDIT PROGRAM" : "NEW TRAINING PROGRAM"} subtitle="Customize workout text, badge tags, media file, and details for the animated cards." />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 680 }}>
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>PROGRAM INFO</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="PROGRAM TITLE"><Input value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="ELITE STRENGTH & POWERBUILDING" /></Field>
+            <Field label="SUBTITLE / TAGLINE"><Input value={form.subtitle || ""} onChange={v => setForm(f => ({ ...f, subtitle: v }))} placeholder="Heavy Compound Training & Progressive Overload" /></Field>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="DURATION (e.g. 60 MIN)"><Input value={form.duration} onChange={v => setForm(f => ({ ...f, duration: v }))} placeholder="60 MIN" /></Field>
+              <Field label="DIFFICULTY LEVEL"><Input value={form.difficulty} onChange={v => setForm(f => ({ ...f, difficulty: v }))} placeholder="ADVANCED / INTENSE / MODERATE" /></Field>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="TAG BADGE (e.g. POWER, BURN, FIGHT)"><Input value={form.tag} onChange={v => setForm(f => ({ ...f, tag: v }))} placeholder="POWER" /></Field>
+              <Field label="ACCENT COLOR (HEX)">
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <Input value={form.color} onChange={v => setForm(f => ({ ...f, color: v }))} placeholder="#D8FF3E" />
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: form.color || ACCENT, border: `1px solid ${BORDER}`, flexShrink: 0 }} />
+                </div>
+              </Field>
+            </div>
+
+            <Field label="EQUIPMENT USED"><Input value={form.equipment || ""} onChange={v => setForm(f => ({ ...f, equipment: v }))} placeholder="Eleiko Competition Barbells & Calibrated Plates" /></Field>
+            <Field label="DESCRIPTION"><Input value={form.desc} onChange={v => setForm(f => ({ ...f, desc: v }))} multiline rows={4} placeholder="Program methodology, coaching focus, and targeted output..." /></Field>
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em", marginBottom: 16 }}>PROGRAM IMAGE / MEDIA</div>
+          <MediaUploader
+            label="PROGRAM COVER IMAGE"
+            type="image"
+            value={form.image || ""}
+            onChange={v => setForm(f => ({ ...f, image: v }))}
+            hint="Upload image to Firebase Storage or paste image URL"
+          />
+        </Card>
+
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ ...MF, fontSize: 10, color: ACCENT, letterSpacing: "0.18em" }}>HIGHLIGHT FEATURES</div>
+            <Btn small variant="secondary" onClick={() => setForm(f => ({ ...f, features: [...(f.features || []), ""] }))}>
+              <Plus size={12} /> Add Feature
+            </Btn>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(form.features || []).map((feat, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Input value={feat} onChange={v => { const fs = [...(form.features || [])]; fs[i] = v; setForm(f => ({ ...f, features: fs })); }} placeholder={`Feature ${i+1}`} />
+                <button onClick={() => setForm(f => ({ ...f, features: (f.features || []).filter((_, idx) => idx !== i) }))} style={{ background: "none", border: "none", color: "#FF3E3E", cursor: "pointer", padding: 4 }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn onClick={saveProgram}><Save size={13} /> {editing !== null ? "Update Program" : "Add Program"}</Btn>
+          <Btn variant="ghost" onClick={() => { setNewProg(false); setEditing(null); setForm(emptyProgram()); }}>Cancel</Btn>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <SectionHead title="TRAINING PROGRAMS" subtitle="Add, edit, delete, and reorder programs in the animated stacked card section." />
+        <Btn onClick={() => { setForm(emptyProgram()); setEditing(null); setNewProg(true); }}><Plus size={14} /> Add Program</Btn>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {programs.map((p, i) => (
+          <Card key={p.id || i} style={{ borderLeft: `4px solid ${p.color || ACCENT}` }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ ...DF, fontSize: 18, color: TEXT }}>{p.name}</span>
+                  <span style={{ ...MF, fontSize: 9, padding: "2px 8px", borderRadius: 4, background: `${p.color || ACCENT}20`, color: p.color || ACCENT, border: `1px solid ${p.color || ACCENT}40` }}>{p.tag}</span>
+                  <span style={{ ...MF, fontSize: 9, color: MUTED }}>{p.duration} • {p.difficulty}</span>
+                </div>
+                {p.subtitle && <div style={{ ...SF, fontSize: 12, color: ACCENT, marginTop: 4 }}>{p.subtitle}</div>}
+                <div style={{ ...SF, fontSize: 13, color: MUTED, marginTop: 6, lineHeight: 1.5 }}>{p.desc}</div>
+              </div>
+
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                <button onClick={() => moveProgram(i, "up")} disabled={i === 0} title="Move Up" style={{ background: SURFACE2, border: `1px solid ${BORDER}`, color: i === 0 ? MUTED : TEXT, opacity: i === 0 ? 0.3 : 1, padding: "6px 10px", borderRadius: 6, cursor: i === 0 ? "not-allowed" : "pointer" }}>↑</button>
+                <button onClick={() => moveProgram(i, "down")} disabled={i === programs.length - 1} title="Move Down" style={{ background: SURFACE2, border: `1px solid ${BORDER}`, color: i === programs.length - 1 ? MUTED : TEXT, opacity: i === programs.length - 1 ? 0.3 : 1, padding: "6px 10px", borderRadius: 6, cursor: i === programs.length - 1 ? "not-allowed" : "pointer" }}>↓</button>
+                <Btn small variant="secondary" onClick={() => startEdit(i)}><Edit3 size={13} /> Edit</Btn>
+                <Btn small danger onClick={() => deleteProgram(i)}><Trash2 size={13} /></Btn>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   );
