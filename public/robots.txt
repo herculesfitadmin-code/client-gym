@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /_vite/
 
 # Sitemap location
-Sitemap: https://herculesfitness.in/sitemap.xml
+Sitemap: https://www.herculesfit.in/sitemap.xml

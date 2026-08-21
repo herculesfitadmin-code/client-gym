@@ -41,8 +41,8 @@ const SURFACE = "#111113";
 const SURFACE2 = "#18181C";
 const BORDER = "rgba(255,255,255,0.07)";
 const TEXT = "#FFFFFF";
-const MUTED = "#71717A";
-const MF: React.CSSProperties = { fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Inter", sans-serif' };
+const DEFAULT_CLOUD_DB_URL = "https://jsonblob.com/api/jsonBlob/hercules_fitness_config";
+
 const DF: React.CSSProperties = { fontFamily: '"Big Shoulders Display", Impact, sans-serif', fontWeight: 900 };
 const SF: React.CSSProperties = { fontFamily: '"DM Sans", sans-serif' };
 
