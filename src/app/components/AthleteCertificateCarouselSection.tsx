@@ -25,7 +25,7 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Merit Certificate & Gold Medal",
     year: "2023",
     category: "MEN'S PHYSIQUE & BODYBUILDING",
-    image: "/certificates/real_cert_1.avif",
+    image: "/certificates/real_cert_1.jpg",
     details: {
       coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
@@ -50,7 +50,7 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Certificate of Merit & State Medal",
     year: "2023",
     category: "STATE LEVEL CHAMPIONSHIP",
-    image: "/certificates/real_cert_2.avif",
+    image: "/certificates/real_cert_2.jpg",
     details: {
       coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
@@ -75,7 +75,7 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Association of Indian Universities",
     year: "2019",
     category: "NATIONAL POWERLIFTING",
-    image: "/certificates/real_cert_3.avif",
+    image: "/certificates/real_cert_3.jpg",
     details: {
       coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
@@ -100,7 +100,7 @@ export const certificatesList: CertificateItem[] = [
     issuer: "National University Sports Board",
     year: "2020",
     category: "NATIONAL BEST PHYSIQUE",
-    image: "/certificates/real_cert_4.avif",
+    image: "/certificates/real_cert_4.jpg",
     details: {
       coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
@@ -125,7 +125,7 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Hydra Fitness Association",
     year: "2022",
     category: "OPEN MEN'S PHYSIQUE",
-    image: "/certificates/real_cert_5.avif",
+    image: "/certificates/real_cert_5.jpg",
     details: {
       coachName: "Mr. Girish Shapurkar",
       coachTitle: "Founder & Head Coach",
@@ -370,6 +370,14 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                     src={cert.image}
                     alt={cert.title}
                     draggable={false}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.endsWith(".avif")) {
+                        target.src = target.src.replace(".avif", ".jpg");
+                      } else if (target.src.endsWith(".jpg")) {
+                        target.src = target.src.replace(".jpg", ".png");
+                      }
+                    }}
                     style={{
                       width: "100%",
                       height: "auto",
@@ -423,6 +431,14 @@ export const AthleteCertificateCarouselSection: React.FC = () => {
                   src={cert.image}
                   alt={cert.title}
                   draggable={false}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src.endsWith(".avif")) {
+                      target.src = target.src.replace(".avif", ".jpg");
+                    } else if (target.src.endsWith(".jpg")) {
+                      target.src = target.src.replace(".jpg", ".png");
+                    }
+                  }}
                   style={{
                     width: "100%",
                     height: "auto",
