@@ -403,8 +403,67 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+// ─── LOADING SKELETON ─────────────────────────────────────────────────────────
+function LoadingSkeleton() {
+  const pulseKeyframes = `
+    @keyframes skeletonPulse {
+      0%, 100% { opacity: 0.25; }
+      50% { opacity: 0.5; }
+    }
+  `;
+  const pulseStyle: React.CSSProperties = {
+    animation: "skeletonPulse 1.5s ease-in-out infinite",
+    background: "#18181C",
+    borderRadius: 8,
+  };
+  return (
+    <div style={{ background: "#080808", color: "#fff", minHeight: "100vh", ...BF }}>
+      <style>{pulseKeyframes}</style>
+      {/* Nav skeleton */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ width: 140, height: 32, ...pulseStyle }} />
+        <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ width: 60, height: 14, ...pulseStyle }} />
+          <div style={{ width: 60, height: 14, ...pulseStyle }} />
+          <div style={{ width: 60, height: 14, ...pulseStyle }} />
+        </div>
+      </div>
+      {/* Hero skeleton */}
+      <div style={{ padding: "clamp(60px, 12vw, 120px) 24px 60px", maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ width: "60%", height: 16, marginBottom: 20, ...pulseStyle }} />
+        <div style={{ width: "90%", height: 48, marginBottom: 16, ...pulseStyle }} />
+        <div style={{ width: "75%", height: 48, marginBottom: 28, ...pulseStyle }} />
+        <div style={{ width: "100%", height: 18, marginBottom: 10, ...pulseStyle }} />
+        <div style={{ width: "85%", height: 18, marginBottom: 40, ...pulseStyle }} />
+        <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ width: 160, height: 50, ...pulseStyle, borderRadius: 6 }} />
+          <div style={{ width: 160, height: 50, ...pulseStyle, borderRadius: 6 }} />
+        </div>
+      </div>
+      {/* Metric cards skeleton */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 32, padding: "40px 24px", flexWrap: "wrap" }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ width: 80, height: 36, margin: "0 auto 8px", ...pulseStyle }} />
+            <div style={{ width: 100, height: 12, margin: "0 auto", ...pulseStyle }} />
+          </div>
+        ))}
+      </div>
+      {/* Section skeleton blocks */}
+      {[1, 2].map((i) => (
+        <div key={i} style={{ padding: "60px 24px", maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ width: 120, height: 12, marginBottom: 20, ...pulseStyle }} />
+          <div style={{ width: "50%", height: 32, marginBottom: 16, ...pulseStyle }} />
+          <div style={{ width: "100%", height: 200, ...pulseStyle, borderRadius: 12 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MainApp() {
-  const [siteData, setSiteData] = useState<AdminSiteData>(() => loadSiteData());
+  const [siteData, setSiteData] = useState<AdminSiteData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [activeAdminEmail, setActiveAdminEmail] = useState("abcd@gmail.com");
@@ -420,11 +479,39 @@ function MainApp() {
     }
   }, []);
 
-  // ⚡ Firebase & Cloud Database Fetching & Live Sync across all devices worldwide
+  // ⚡ Firebase is the SINGLE SOURCE OF TRUTH — fetch before rendering
   useEffect(() => {
+    let resolved = false;
+
+    // Safety timeout: never block the user for more than 3 seconds
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        setSiteData((prev) => prev || loadSiteData());
+        setIsLoading(false);
+      }
+    }, 3000);
+
     fetchCloudSiteData().then((cloudData) => {
-      if (cloudData) {
-        setSiteData(cloudData);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        if (cloudData) {
+          setSiteData(cloudData);
+          // Cache to localStorage for faster subsequent loads
+          try { localStorage.setItem("hercules_admin_site_data_v9", JSON.stringify(cloudData)); } catch (e) {}
+        } else {
+          // Firebase empty or unreachable — fall back to localStorage/defaults
+          setSiteData(loadSiteData());
+        }
+        setIsLoading(false);
+      }
+    }).catch(() => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        setSiteData(loadSiteData());
+        setIsLoading(false);
       }
     });
 
@@ -436,6 +523,7 @@ function MainApp() {
     });
 
     return () => {
+      clearTimeout(timeout);
       unsubscribe();
     };
   }, []);
@@ -643,6 +731,11 @@ function MainApp() {
     v < 25   ? { label: "HEALTHY", color: LIME } :
     v < 30   ? { label: "OVERWEIGHT", color: RED } :
                { label: "OBESE", color: PURPLE };
+
+  // ⚡ Show loading skeleton while Firebase data is being fetched
+  if (isLoading || !siteData) {
+    return <LoadingSkeleton />;
+  }
 
   return (
     <div style={{ background: "#080808", color: "#fff", ...BF, overflowX: "clip" }} role="document">
