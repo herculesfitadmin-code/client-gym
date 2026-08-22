@@ -21,17 +21,20 @@ import { CoachesStackedCardsSection } from "./components/CoachesStackedCards";
 import { GymAtmosphereSection } from "./components/GymAtmosphereSection";
 import { FounderStorySection } from "./components/FounderStorySection";
 import { AthleteCertificateCarouselSection } from "./components/AthleteCertificateCarouselSection";
-import { AdminAuthModal } from "./components/AdminAuthModal";
-import { AdminControlPanel } from "./components/AdminControlPanel";
 import { loadSiteData, saveSiteData, fetchCloudSiteData, pushToCloud, recordEnquiryLead, defaultSiteData, AdminSiteData, PricingPlan, BlogPost } from "./adminStore";
-import { WebInquiryModal } from "./components/WebInquiryModal";
 import { HerculesLogo } from "./components/HerculesLogo";
-import { BlogArticleModal } from "./components/BlogArticleModal";
-import { PolicyReaderModal } from "./components/PolicyReaderModal";
 import { subscribeToFirebaseSiteData } from "../lib/firebase";
 
-import girishBefore from "../../public/transformations/girish_before.png";
-import girishAfter from "../../public/transformations/girish_after.png";
+import girishBefore from "../../public/transformations/girish_before.avif";
+import girishAfter from "../../public/transformations/girish_after.avif";
+
+// ─── DYNAMIC LAZY COMPONENT IMPORTS (Code Splitting for High Performance) ───
+const AdminAuthModal = React.lazy(() => import("./components/AdminAuthModal").then(m => ({ default: m.AdminAuthModal })));
+const AdminControlPanel = React.lazy(() => import("./components/AdminControlPanel").then(m => ({ default: m.AdminControlPanel })));
+const WebInquiryModal = React.lazy(() => import("./components/WebInquiryModal").then(m => ({ default: m.WebInquiryModal })));
+const BlogArticleModal = React.lazy(() => import("./components/BlogArticleModal").then(m => ({ default: m.BlogArticleModal })));
+const PolicyReaderModal = React.lazy(() => import("./components/PolicyReaderModal").then(m => ({ default: m.PolicyReaderModal })));
+
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const LIME = "#D8FF3E";
@@ -462,12 +465,20 @@ function LoadingSkeleton() {
 }
 
 function MainApp() {
-  const [siteData, setSiteData] = useState<AdminSiteData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Stale-While-Revalidate: Instant load from local cache if present, background revalidation with Firebase
+  const [siteData, setSiteData] = useState<AdminSiteData | null>(() => {
+    try {
+      const cached = localStorage.getItem("hercules_admin_site_data_v9");
+      if (cached) return loadSiteData();
+    } catch (e) {}
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => !siteData);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [activeAdminEmail, setActiveAdminEmail] = useState("abcd@gmail.com");
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+
   // Auto-detect /admin URL route
   useEffect(() => {
     if (
@@ -479,18 +490,18 @@ function MainApp() {
     }
   }, []);
 
-  // ⚡ Firebase is the SINGLE SOURCE OF TRUTH — fetch before rendering
+  // ⚡ High-speed Firebase Sync & Background Revalidation
   useEffect(() => {
     let resolved = false;
 
-    // Safety timeout: never block the user for more than 3 seconds
+    // Safety timeout for cold starts with no cache
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
         setSiteData((prev) => prev || loadSiteData());
         setIsLoading(false);
       }
-    }, 3000);
+    }, 2500);
 
     fetchCloudSiteData().then((cloudData) => {
       if (!resolved) {
@@ -498,11 +509,9 @@ function MainApp() {
         clearTimeout(timeout);
         if (cloudData) {
           setSiteData(cloudData);
-          // Cache to localStorage for faster subsequent loads
           try { localStorage.setItem("hercules_admin_site_data_v9", JSON.stringify(cloudData)); } catch (e) {}
         } else {
-          // Firebase empty or unreachable — fall back to localStorage/defaults
-          setSiteData(loadSiteData());
+          setSiteData((prev) => prev || loadSiteData());
         }
         setIsLoading(false);
       }
@@ -510,12 +519,11 @@ function MainApp() {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
-        setSiteData(loadSiteData());
+        setSiteData((prev) => prev || loadSiteData());
         setIsLoading(false);
       }
     });
 
-    // Real-time Firestore snapshot listener for instant live updates
     const unsubscribe = subscribeToFirebaseSiteData((cloudData) => {
       if (cloudData) {
         setSiteData(cloudData);
@@ -527,6 +535,7 @@ function MainApp() {
       unsubscribe();
     };
   }, []);
+
 
   const handleSaveSiteData = async (newData: AdminSiteData) => {
     setSiteData(newData);
@@ -1126,6 +1135,7 @@ function MainApp() {
           loop
           muted
           playsInline
+          preload="none"
           controls={false}
           aria-hidden="true"
           title="Coach Girish training at Hercules Fitness Kalaburagi"
@@ -2662,48 +2672,61 @@ function MainApp() {
       </footer>
       </main>
 
-      {/* ─── ADMIN MODALS ─── */}
-      <AdminAuthModal
-        isOpen={isAdminAuthOpen}
-        onClose={() => setIsAdminAuthOpen(false)}
-        siteData={siteData}
-        onSuccess={(authenticatedEmail) => {
-          setActiveAdminEmail(authenticatedEmail);
-          setIsAdminAuthOpen(false);
-          setIsAdminPanelOpen(true);
-        }}
-      />
+      {/* ─── LAZY MODALS (Code Splitting) ─── */}
+      <React.Suspense fallback={null}>
+        {isAdminAuthOpen && (
+          <AdminAuthModal
+            isOpen={isAdminAuthOpen}
+            onClose={() => setIsAdminAuthOpen(false)}
+            siteData={siteData}
+            onSuccess={(authenticatedEmail) => {
+              setActiveAdminEmail(authenticatedEmail);
+              setIsAdminAuthOpen(false);
+              setIsAdminPanelOpen(true);
+            }}
+          />
+        )}
 
-      <AdminControlPanel
-        isOpen={isAdminPanelOpen}
-        onClose={() => setIsAdminPanelOpen(false)}
-        siteData={siteData}
-        currentUserEmail={activeAdminEmail}
-        onSaveData={handleSaveSiteData}
-        onResetData={handleResetSiteData}
-        onLogout={() => setIsAdminPanelOpen(false)}
-      />
+        {isAdminPanelOpen && (
+          <AdminControlPanel
+            isOpen={isAdminPanelOpen}
+            onClose={() => setIsAdminPanelOpen(false)}
+            siteData={siteData}
+            currentUserEmail={activeAdminEmail}
+            onSaveData={handleSaveSiteData}
+            onResetData={handleResetSiteData}
+            onLogout={() => setIsAdminPanelOpen(false)}
+          />
+        )}
 
-      <WebInquiryModal
-        isOpen={!!inquiryPlan}
-        onClose={() => setInquiryPlan(null)}
-        selectedPlan={inquiryPlan}
-        siteData={siteData}
-        onUpdateSiteData={setSiteData}
-      />
+        {!!inquiryPlan && (
+          <WebInquiryModal
+            isOpen={!!inquiryPlan}
+            onClose={() => setInquiryPlan(null)}
+            selectedPlan={inquiryPlan}
+            siteData={siteData}
+            onUpdateSiteData={setSiteData}
+          />
+        )}
 
-      <BlogArticleModal
-        isOpen={!!selectedBlog}
-        onClose={() => setSelectedBlog(null)}
-        blog={selectedBlog}
-      />
+        {!!selectedBlog && (
+          <BlogArticleModal
+            isOpen={!!selectedBlog}
+            onClose={() => setSelectedBlog(null)}
+            blog={selectedBlog}
+          />
+        )}
 
-      <PolicyReaderModal
-        isOpen={!!activePolicyModal}
-        onClose={() => setActivePolicyModal(null)}
-        policyType={activePolicyModal}
-        policies={siteData.policies || defaultSiteData.policies}
-      />
+        {!!activePolicyModal && (
+          <PolicyReaderModal
+            isOpen={!!activePolicyModal}
+            onClose={() => setActivePolicyModal(null)}
+            policyType={activePolicyModal}
+            policies={siteData.policies || defaultSiteData.policies}
+          />
+        )}
+      </React.Suspense>
+
 
       {/* ─── GLOBAL STYLES ─────────────────────────────────────────── */}
       <style>{`

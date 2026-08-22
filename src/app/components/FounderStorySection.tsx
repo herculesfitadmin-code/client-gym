@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { ShieldCheck, Trophy, UserCheck, Target } from "lucide-react";
 import { FounderData } from "../adminStore";
-import defaultGirishAfter from "../../../public/transformations/girish_after.png";
+import defaultGirishAfter from "../../../public/transformations/girish_after.avif";
 
 const LIME = "#D8FF3E";
 

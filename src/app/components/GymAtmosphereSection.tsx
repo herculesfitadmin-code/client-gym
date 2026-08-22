@@ -2,12 +2,13 @@ import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause, Volume2, VolumeX, Maximize2, X, Compass, MapPin } from "lucide-react";
 
-// Real Gym Photos - SEO Optimized File Names for Kalaburagi Local Search
-import exteriorImg from "../../../public/gallery/best-gym-in-kalaburagi-hercules-fitness-ola-building-exterior.jpg";
-import turfImg from "../../../public/gallery/hercules-fitness-kalaburagi-squat-rack-functional-turf-area.jpg";
-import cableImg from "../../../public/gallery/hercules-fitness-kalaburagi-cable-crossover-bench-press-zone.jpg";
-import dumbbellImg from "../../../public/gallery/hercules-fitness-kalaburagi-dumbbell-rack-free-weights-section.jpg";
-import aerofitImg from "../../../public/gallery/hercules-fitness-kalaburagi-aerofit-cardio-bikes-treadmills.jpg";
+// Real Gym Photos - SEO Optimized AVIF Assets for Kalaburagi Local Search
+import exteriorImg from "../../../public/gallery/best-gym-in-kalaburagi-hercules-fitness-ola-building-exterior.avif";
+import turfImg from "../../../public/gallery/hercules-fitness-kalaburagi-squat-rack-functional-turf-area.avif";
+import cableImg from "../../../public/gallery/hercules-fitness-kalaburagi-cable-crossover-bench-press-zone.avif";
+import dumbbellImg from "../../../public/gallery/hercules-fitness-kalaburagi-dumbbell-rack-free-weights-section.avif";
+import aerofitImg from "../../../public/gallery/hercules-fitness-kalaburagi-aerofit-cardio-bikes-treadmills.avif";
+
 
 const LIME = "#D8FF3E";
 

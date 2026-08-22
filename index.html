@@ -266,16 +266,29 @@
     }
     </script>
 
-    <!-- ═══ GOOGLE ANALYTICS GA4 ═══ -->
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-07QX5BLHBC"></script>
+    <!-- ═══ GOOGLE ANALYTICS GA4 (Deferred for Performance) ═══ -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-07QX5BLHBC');
+      function loadGA() {
+        if (window.__gaLoaded) return;
+        window.__gaLoaded = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-07QX5BLHBC';
+        document.head.appendChild(s);
+        gtag('config', 'G-07QX5BLHBC');
+      }
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadGA, { timeout: 3000 });
+      } else {
+        setTimeout(loadGA, 2000);
+      }
     </script>
+
 
   </head>
 
